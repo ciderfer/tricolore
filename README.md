@@ -52,6 +52,14 @@ Page `alignement.html` (script `alignement.js`), accessible par l’onglet « Al
 - L’âge est calculé à la date du jour (heure de l’Est). Les meneurs (points, buts, passes) sont calculés à partir de `stats.json`. Les égalités sont toutes nommées (deux noms au plus, puis « +N »).
 - Si une source est en échec, la section concernée affiche un message d’erreur et le pied de page la nomme.
 
+## Fiches de joueurs
+
+Page `joueur.html?id=NUMÉRO` (script `joueur.js`). Chaque nom de l’alignement (et des tableaux de statistiques, pour les joueurs de l’alignement actuel) y mène.
+
+- `data/joueurs/<id>.json` : `/v1/player/<id>/landing`, écrit par la tâche de données (`scripts/joueurs.mjs`) pour chaque joueur de `roster.json`. Seuls les champs affichés sont gardés (aucun lien de photo). Un fichier n’est réécrit que s’il change ; la fiche d’un joueur qui quitte l’alignement est supprimée.
+- La page affiche : numéro, nom, position, âge, main, lieu de naissance, taille et poids (métrique d’abord), statistiques de la saison en cours dans la LNH, 5 derniers matchs et totaux en carrière dans la LNH.
+- Si la fiche d’un joueur n’a pas pu être récupérée, `meta.json` le note (`joueurs.failed`) et la page affiche un message d’erreur au lieu de chiffres possiblement périmés.
+
 ## Icône et écran d’accueil
 
 - Icône originale (pas le logo de la LNH ni du CH), façon numéro de chandail cousu : « T » de la police Graduate en bleu, contours blanc / rouge / blanc, sur le rouge du chandail avec la bande blanc/bleu/blanc. Le T est un tracé (aucune police requise). Sources SVG dans `icons/`, générées par `scripts/icones.py`; les petits favicons sont simplifiés.

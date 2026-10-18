@@ -70,6 +70,19 @@ if (newsOk) {
 }
 const newsStatus = Object.fromEntries(Object.entries(news.status).map(([k, v]) => [k, v.ok ? { ok: true, name: v.name } : v]));
 
+// Fiches des joueurs (alignement actuel) : data/joueurs/<id>.json, voir scripts/joueurs.mjs.
+let playersStatus = oldMeta?.joueurs ?? null;
+if (sources.roster?.ok) {
+  const { fetchPlayers } = await import("./joueurs.mjs");
+  const roster = JSON.parse(await readText("roster.json"));
+  const season = Number(JSON.parse((await readText("schedule.json")) || "{}").currentSeason) || null;
+  const res = await fetchPlayers(new URL("joueurs/", DIR), roster, season);
+  if (res.changed) changed = true;
+  playersStatus = res.status;
+  console.log(`Fiches de joueurs : ${res.status.count} à jour${res.status.failed.length ? `, ${res.status.failed.length} en échec` : ""}.`);
+}
+if (JSON.stringify(playersStatus) !== JSON.stringify(oldMeta?.joueurs)) changed = true;
+
 if (JSON.stringify(sources) !== JSON.stringify(oldMeta?.sources)) changed = true;
 if (JSON.stringify(newsStatus) !== JSON.stringify(oldMeta?.news)) changed = true;
 const now = new Date();
@@ -83,6 +96,7 @@ if (changed || heartbeat) {
     checkedAt: anyOk ? now.toISOString() : oldMeta?.checkedAt || null,
     sources,
     news: newsStatus,
+    joueurs: playersStatus,
   };
   await writeFile(new URL("meta.json", DIR), JSON.stringify(meta, null, 2) + "\n");
 }

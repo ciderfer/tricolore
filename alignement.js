@@ -81,11 +81,18 @@
         const hand = SIDE[p.shootsCatches] ? `${p.positionCode === "G" ? "Attrape" : "Lance"} de la ${SIDE[p.shootsCatches]}` : "";
         const info = [POS[p.positionCode] || p.positionCode, a != null ? `${a} ans` : "", hand].filter(Boolean).join(" · ");
         return `<li class="pl"><span class="pl-no num">${fin(p.sweaterNumber) ? p.sweaterNumber : "—"}</span>
-          <span class="pl-id"><span class="pl-name cond">${esc(loc(p.firstName))} ${esc(loc(p.lastName))}</span><span class="pl-info">${esc(info)}</span></span></li>`;
+          <a class="pl-id pl-link" href="joueur.html?id=${encodeURIComponent(p.id)}"><span class="pl-name cond">${esc(loc(p.firstName))} ${esc(loc(p.lastName))}</span><span class="pl-info">${esc(info)}</span></a></li>`;
       }).join("");
       return `<h3 class="grp lbl">${title} <span>${list.length}</span></h3><ul class="roster">${rows}</ul>`;
     };
     return `<section class="blk">${h}${group("Attaquants", r.forwards)}${group("Défenseurs", r.defensemen)}${group("Gardiens", r.goalies)}</section>`;
+  }
+
+  // Nom dans les tableaux : lien vers la fiche si le joueur est dans l'alignement actuel (fiche générée).
+  function nameCell(d, p) {
+    const ids = new Set(["forwards", "defensemen", "goalies"].flatMap((k) => d.roster?.[k] || []).map((x) => x.id));
+    const nm = `<span class="nm">${esc(shortName(p))}</span>`;
+    return ids.has(p.playerId) ? `<a class="nm-link" href="joueur.html?id=${encodeURIComponent(p.playerId)}">${nm}</a>` : nm;
   }
 
   function gameTypeText(gt) { return gt === 3 ? "Séries" : gt === 1 ? "Préparatoire" : "Saison régulière"; }
@@ -100,7 +107,7 @@
     const n = (v) => (fin(v) ? v : "—");
     return `<section class="blk white">${h}<p class="tbl-sub lbl">${esc(gameTypeText(s.gameType))}</p><table class="stats sk">
       <thead><tr><th>Joueur</th><th>PJ</th><th>B</th><th>A</th><th>PTS</th><th>+/-</th></tr></thead><tbody>
-      ${list.map((p) => `<tr><td><span class="nm">${esc(shortName(p))}</span><span class="ps">${esc(POS_SHORT[p.positionCode] || p.positionCode || "")}</span></td><td>${n(p.gamesPlayed)}</td><td>${n(p.goals)}</td><td>${n(p.assists)}</td><td class="pts">${n(p.points)}</td><td>${fin(p.plusMinus) ? signed(p.plusMinus) : "—"}</td></tr>`).join("")}
+      ${list.map((p) => `<tr><td>${nameCell(d, p)}<span class="ps">${esc(POS_SHORT[p.positionCode] || p.positionCode || "")}</span></td><td>${n(p.gamesPlayed)}</td><td>${n(p.goals)}</td><td>${n(p.assists)}</td><td class="pts">${n(p.points)}</td><td>${fin(p.plusMinus) ? signed(p.plusMinus) : "—"}</td></tr>`).join("")}
       </tbody></table><p class="asof">PJ parties jouées · B buts · A passes · PTS points · +/- différentiel. Seuls les joueurs ayant joué sont listés.</p></section>`;
   }
 
@@ -113,7 +120,7 @@
     const n = (v) => (fin(v) ? v : "—");
     return `<section class="blk white">${h}<table class="stats gl">
       <thead><tr><th>Gardien</th><th>PJ</th><th>V</th><th>D</th><th>DP</th><th>%ARR</th><th>MOY</th></tr></thead><tbody>
-      ${list.map((p) => `<tr><td><span class="nm">${esc(shortName(p))}</span></td><td>${n(p.gamesPlayed)}</td><td>${n(p.wins)}</td><td>${n(p.losses)}</td><td>${n(p.overtimeLosses)}</td><td class="pts">${fin(p.savePercentage) ? fPct.format(p.savePercentage).replace(/^0(?=,)/, "") : "—"}</td><td>${fin(p.goalsAgainstAverage) ? fGaa.format(p.goalsAgainstAverage) : "—"}</td></tr>`).join("")}
+      ${list.map((p) => `<tr><td>${nameCell(d, p)}</td><td>${n(p.gamesPlayed)}</td><td>${n(p.wins)}</td><td>${n(p.losses)}</td><td>${n(p.overtimeLosses)}</td><td class="pts">${fin(p.savePercentage) ? fPct.format(p.savePercentage).replace(/^0(?=,)/, "") : "—"}</td><td>${fin(p.goalsAgainstAverage) ? fGaa.format(p.goalsAgainstAverage) : "—"}</td></tr>`).join("")}
       </tbody></table><p class="asof">V victoires · D défaites · DP défaites en prolongation ou tirs de barrage · %ARR taux d’arrêts · MOY moyenne de buts accordés.</p></section>`;
   }
 
