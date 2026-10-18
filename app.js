@@ -86,7 +86,37 @@
       })()}
       <div class="opp"><div><span class="vs">${home ? "Contre les" : "Chez les"}</span><span class="name cond">${esc(opp.name)}</span><span class="place">de ${esc(opp.place)}</span></div></div>
       <div class="time"><span class="num">${tbd ? "À CONFIRMER" : `${hourOf(dt)}<span class="hh">h</span>${minOf(dt)}`}</span><small>Heure<br>de l’Est</small></div>
-      <div class="meta"><span class="chip w">${esc(loc(g.venue))}</span>${chips(tvOf(g))}</div></section>`;
+      <div class="meta"><span class="chip w">${esc(loc(g.venue))}</span>${chips(tvOf(g))}</div>${faceAFace(d, g, home, opp, byAbbr)}</section>`;
+  }
+
+  // Face-à-face (grand écran seulement, masqué sur téléphone) : les deux équipes selon standings.json,
+  // et le rang de ce match parmi les affrontements de la saison selon schedule.json. Rien d'autre.
+  const DIV_FR = { A: "Atlantique", M: "Métropolitaine", C: "Centrale", P: "Pacifique" };
+  const CONF_FR = { E: "Est", W: "Ouest" };
+  const STREAK_FR = { W: "V", L: "D", OT: "DP" };
+  function faceAFace(d, g, home, opp, byAbbr) {
+    const a = byAbbr?.[MTL], b = byAbbr?.[opp.abbr];
+    const ok = (t) => t && [t.wins, t.losses, t.otLosses, t.points, t.divisionSequence, t.conferenceSequence].every(Number.isFinite);
+    if (!ok(a) || !ok(b)) return "";
+    const rec = (w, l, o) => [w, l, o].every(Number.isFinite) ? `${w}-${l}-${o}` : "—";
+    const hr = (t) => rec(t.homeWins, t.homeLosses, t.homeOtLosses), rr = (t) => rec(t.roadWins, t.roadLosses, t.roadOtLosses);
+    const streak = (t) => STREAK_FR[t.streakCode] && Number.isFinite(t.streakCount) ? `${t.streakCount} ${STREAK_FR[t.streakCode]}` : "—";
+    const goals = (t) => Number.isFinite(t.goalFor) && Number.isFinite(t.goalAgainst) ? `${t.goalFor}-${t.goalAgainst}` : "—";
+    const row = (label, x, y, t) => `<div class="faf-r"><span class="faf-l">${label}</span><span class="faf-v${t ? " t" : ""}">${x}</span><span class="faf-v${t ? " t" : ""}">${y}</span></div>`;
+    const vs = (d.schedule?.games || []).filter((x) => x.gameType === g.gameType && [x.homeTeam.abbrev, x.awayTeam.abbrev].includes(opp.abbr))
+      .sort((p, q) => p.startTimeUTC.localeCompare(q.startTimeUTC));
+    const i = vs.findIndex((x) => x.id === g.id);
+    const nth = i >= 0 && vs.length > 1 ? `${i === 0 ? "1<sup>er</sup>" : `${i + 1}<sup>e</sup>`} de ${vs.length} affrontements cette saison` : "";
+    const asOf = a.date ? new Intl.DateTimeFormat("fr-CA", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(a.date + "T12:00:00Z")) : "";
+    return `<div class="faf" aria-label="Face-à-face"><div class="faf-r faf-h"><span class="lbl">Face-à-face</span><span class="cond">Canadien</span><span class="cond">${esc(opp.name)}</span></div>
+      ${row("Fiche", rec(a.wins, a.losses, a.otLosses), rec(b.wins, b.losses, b.otLosses))}
+      ${row("Points", `${a.points}`, `${b.points}`)}
+      ${row("Division", `${rang(a.divisionSequence)} ${DIV_FR[a.divisionAbbrev] || ""}`, `${rang(b.divisionSequence)} ${DIV_FR[b.divisionAbbrev] || ""}`, true)}
+      ${row("Association", `${rang(a.conferenceSequence)} ${CONF_FR[a.conferenceAbbrev] || ""}`, `${rang(b.conferenceSequence)} ${CONF_FR[b.conferenceAbbrev] || ""}`, true)}
+      ${row("Buts pour-contre", goals(a), goals(b))}
+      ${home ? row("Domicile / étranger", hr(a), rr(b)) : row("Étranger / domicile", rr(a), hr(b))}
+      ${row("Séquence", streak(a), streak(b))}
+      <p class="faf-n">${nth ? `${nth}. ` : ""}Classement LNH${asOf ? ` au ${esc(asOf)}` : ""}.</p></div>`;
   }
 
   // Carte du match en cours ou terminé. source : "worker" (direct) ou "static" (fichiers du site).
@@ -121,12 +151,12 @@
     return `<section class="band" aria-label="Fiche du Canadien"><div class="rec">
       <div class="big num">${me.wins}-${me.losses}-${me.otLosses}</div>
       <div class="pts num">${me.points}<span>PTS</span></div>
-      <div class="rank">${rang(me.divisionSequence)} Atlantique<br>${rang(me.conferenceSequence)} dans l’Est<br>${me.gamesPlayed} match${me.gamesPlayed > 1 ? "s" : ""} joué${me.gamesPlayed > 1 ? "s" : ""}</div>
+      <div class="rank"><span>${rang(me.divisionSequence)} Atlantique</span><br><span>${rang(me.conferenceSequence)} dans l’Est</span><br><span>${me.gamesPlayed} match${me.gamesPlayed > 1 ? "s" : ""} joué${me.gamesPlayed > 1 ? "s" : ""}</span></div>
     </div></section>`;
   }
 
   function results(d) {
-    const h = `<h2 class="h cond">Derniers<br>résultats</h2>`;
+    const h = `<h2 class="h cond">Derniers <br>résultats</h2>`;
     if (!d.schedule) return `<section class="blk">${h}${errBox("Résultats", d.errors.schedule)}</section>`;
     const games = d.schedule.games
       .filter((g) => DONE.has(g.gameState) && (g.gameType === 2 || g.gameType === 3) && Number.isFinite(g.homeTeam.score) && Number.isFinite(g.awayTeam.score))
@@ -146,7 +176,7 @@
   }
 
   function standings(d, me, all) {
-    const h = `<h2 class="h cond">Division<br>Atlantique</h2>`;
+    const h = `<h2 class="h cond">Division <br>Atlantique</h2>`;
     if (!me) return `<section class="blk white">${h}${errBox("Classement", d.errors.standings || "équipe introuvable")}</section>`;
     const div = all.filter((t) => t.divisionAbbrev === me.divisionAbbrev).sort((a, b) => a.divisionSequence - b.divisionSequence);
     const asOf = new Intl.DateTimeFormat("fr-CA", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(me.date + "T12:00:00Z"));
@@ -201,7 +231,7 @@
   // Rangs tels que publiés par la LNH dans standings.json (divisionSequence, wildcardSequence) :
   // wildcardSequence vaut 0 pour les 3 premiers de division, puis 1, 2 (équipes repêchées), 3 et plus (hors séries).
   function series(d, me, all) {
-    const h = `<h2 class="h cond">Course aux<br>séries</h2>`;
+    const h = `<h2 class="h cond">Course aux <br>séries</h2>`;
     if (!me) return `<section class="blk white series">${h}${errBox("Course aux séries", d.errors.standings || "équipe introuvable")}</section>`;
     const conf = all.filter((t) => t.conferenceAbbrev === me.conferenceAbbrev);
     const okNum = (t) => [t.points, t.gamesPlayed, t.divisionSequence, t.wildcardSequence].every(Number.isFinite);
