@@ -114,12 +114,14 @@
       <div class="meta"><span class="chip w">${esc(loc(g.venue))}</span>${chips(tvOf(g))}</div>${/^\d{10}$/.test(String(g.id)) ? `<a class="more hero-more" href="match.html?id=${encodeURIComponent(g.id)}">Feuille de match ›</a>` : ""}</section>`;
   }
 
+  // Rang au classement (sous-entendu : place) : 1re, 2e, 3e…
+  const rang = (n) => (n === 1 ? "1<sup>re</sup>" : `${n}<sup>e</sup>`);
   function band(d, me) {
     if (!me) return `<section class="band"><div class="rec">${errBox("Classement", d.errors.standings || "équipe introuvable")}</div></section>`;
     return `<section class="band" aria-label="Fiche du Canadien"><div class="rec">
       <div class="big num">${me.wins}-${me.losses}-${me.otLosses}</div>
       <div class="pts num">${me.points}<span>PTS</span></div>
-      <div class="rank">${me.divisionSequence}<sup>e</sup> Atlantique<br>${me.conferenceSequence}<sup>e</sup> dans l’Est<br>${me.gamesPlayed} matchs joués</div>
+      <div class="rank">${rang(me.divisionSequence)} Atlantique<br>${rang(me.conferenceSequence)} dans l’Est<br>${me.gamesPlayed} match${me.gamesPlayed > 1 ? "s" : ""} joué${me.gamesPlayed > 1 ? "s" : ""}</div>
     </div></section>`;
   }
 
@@ -134,7 +136,7 @@
       const home = g.homeTeam.abbrev === MTL, us = home ? g.homeTeam : g.awayTeam, them = home ? g.awayTeam : g.homeTeam;
       const x = g.gameOutcome?.lastPeriodType;
       const code = us.score > them.score ? "V" : x === "OT" || x === "SO" ? "DP" : "D";
-      const extra = x === "OT" ? "Prol." : x === "SO" ? "T.B." : "";
+      const extra = x === "OT" ? "Prol." : x === "SO" ? "TB" : "";
       const dt = new Date(g.startTimeUTC);
       const label = code === "V" ? "Victoire" : code === "DP" ? "Défaite en prolongation ou tirs de barrage" : "Défaite";
       return `<a class="res res-a" href="match.html?id=${encodeURIComponent(g.id)}" aria-label="${label} ${us.score} à ${them.score} : feuille de match"><div class="code ${code}" title="${label}">${code}</div>
