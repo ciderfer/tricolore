@@ -54,7 +54,7 @@ Page `alignement.html` (script `alignement.js`), accessible par l’onglet « Al
 
 ## Icône et écran d’accueil
 
-- Icône originale (pas le logo de la LNH ni du CH) : rouge du chandail, bande bleu-blanc, « T » blanc et les deux points du mot-symbole. Sources SVG dans `icons/`, générées par `scripts/icones.py`.
+- Icône originale (pas le logo de la LNH ni du CH), façon numéro de chandail cousu : « T » de la police Graduate en bleu, contours blanc / rouge / blanc, sur le rouge du chandail avec la bande blanc/bleu/blanc. Le T est un tracé (aucune police requise). Sources SVG dans `icons/`, générées par `scripts/icones.py`; les petits favicons sont simplifiés.
 - `manifest.webmanifest` : nom « Tricolore », `display: standalone`, `start_url` et `scope` `/tricolore/`.
 - Sur iPhone : Safari → Partager → « Sur l’écran d’accueil ». Barre d’état translucide au-dessus de la bande bleue.
 - Aucun service worker : la page lit toujours les données fraîches.

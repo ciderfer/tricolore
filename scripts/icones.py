@@ -1,20 +1,44 @@
-# Tricolore — génère icons/icon.svg, icon-maskable.svg et favicon.svg (motif original : chandail rouge, bande bleu-blanc, « T »).
-# Les PNG sont rendus depuis ces SVG (navigateur sans tête) : apple-touch-icon 180, 192, 512, maskable 512, favicon 32 et .ico 16/32/48.
-import sys
-def svg(maskable=False, size=1024, small=False):
-    # Géométrie sur 1024. Version « maskable » : tout le motif dans le cercle central de 80 %.
-    s = 0.78 if maskable else 1.0
-    o = 512*(1-s)
-    def r(x,y,w,h,c): return f'<rect x="{o+x*s:.1f}" y="{o+y*s:.1f}" width="{w*s:.1f}" height="{h*s:.1f}" fill="{c}"/>'
-    band = (f'<rect x="0" y="{o+606*s:.1f}" width="1024" height="{40*s:.1f}" fill="#fff"/>'
-            f'<rect x="0" y="{o+646*s:.1f}" width="1024" height="{120*s:.1f}" fill="#192168"/>'
-            f'<rect x="0" y="{o+766*s:.1f}" width="1024" height="{40*s:.1f}" fill="#fff"/>')
-    T = r(212,170,600,156,"#fff") + r(434,170,156,712,"#fff")
-    # Points du mot-symbole (blanc cerclé de bleu), de part et d'autre du pied du T, dans la bande.
-    dot = "".join(f'<circle cx="{o+cx*s:.1f}" cy="{o+706*s:.1f}" r="{30*s:.1f}" fill="#fff" stroke="#192168" stroke-width="{0*s:.1f}"/>' for cx in (300,724)) if not small else ""
-    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="{size}" height="{size}"><rect width="1024" height="1024" fill="#AF1E2D"/>{band}{T}{dot}</svg>'
-import re
-open("icons/icon.svg","w").write(svg())
-open("icons/icon-maskable.svg","w").write(svg(True))
+# Tricolore — génère les SVG de l'icône (variante A « numéro cousu ») dans icons/.
+# Motif original : chandail rouge, bande blanc/bleu/blanc, « T » de la police Graduate (OFL)
+# en bleu, contours blanc / rouge / blanc, ombre rouge foncé (sous la bande, donc invisible sur les rayures).
+# Le T est converti en tracé : les SVG n'ont besoin d'aucune police.
+# Les PNG (180, 192, 512, maskable 512, favicons 16/32/48 et .ico) sont rendus depuis ces SVG.
+R, B, W, SH = "#AF1E2D", "#192168", "#fff", "#741420"
+T_PATH = "M436 0H144V80H244V670H96V554H20V750H560V554H484V670H336V80H436Z"  # Graduate « T », unités 1000/em, ligne de base y=0
+ADV = 580
 
-open("icons/favicon.svg","w").write(re.sub(r' width="\d+" height="\d+"', '', svg(small=True), count=1))
+def t_layer(color, stroke, cx, base, size, dx=0, dy=0):
+    k = size / 1000
+    tr = f"translate({cx - k * ADV / 2 + dx:.1f} {base + dy:.1f}) scale({k:.4f} {-k:.4f})"
+    st = f' stroke="{color}" stroke-width="{stroke / k:.1f}" stroke-linejoin="round"' if stroke else ""
+    return f'<path transform="{tr}" d="{T_PATH}" fill="{color}"{st}/>'
+
+def svg(kind="full"):
+    # kind : full (iOS, 192, 512), maskable (motif dans le cercle sûr de 80 %), small (favicons)
+    if kind == "small":
+        cx, base, size = 512, 900, 1050
+        layers = [(W, 150, 0, 0), (B, 0, 0, 0)]
+        band_y, band_h, shadow = 600, 220, False
+    else:
+        s = 0.76 if kind == "maskable" else 1.0
+        cx, base, size = 512, 512 + (872 - 512) * s, 900 * s
+        layers = [(W, 150 * s, 0, 0), (R, 112 * s, 0, 0), (W, 62 * s, 0, 0), (B, 0, 0, 0)]
+        band_y, band_h, shadow = 512 + (610 - 512) * s, 200 * s, True
+    st = band_h * 0.2
+    out = [f'<rect width="1024" height="1024" fill="{R}"/>']
+    if shadow:  # ombre sous la bande : seulement visible sur le rouge
+        out.append(t_layer(SH, layers[0][1], cx, base, size, 22 * (size / 900), 24 * (size / 900)))
+    out.append(f'<rect y="{band_y:.1f}" width="1024" height="{st:.1f}" fill="{W}"/>'
+               f'<rect y="{band_y + st:.1f}" width="1024" height="{band_h - 2 * st:.1f}" fill="{B}"/>'
+               f'<rect y="{band_y + band_h - st:.1f}" width="1024" height="{st:.1f}" fill="{W}"/>')
+    out += [t_layer(c, w, cx, base, size) for c, w, _, _ in layers]
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">' + "".join(out) + "</svg>"
+
+if __name__ == "__main__":
+    import pathlib
+    d = pathlib.Path(__file__).resolve().parent.parent / "icons"
+    d.mkdir(exist_ok=True)
+    (d / "icon.svg").write_text(svg("full"))
+    (d / "icon-maskable.svg").write_text(svg("maskable"))
+    (d / "favicon.svg").write_text(svg("small"))
+    print("icons/icon.svg, icons/icon-maskable.svg, icons/favicon.svg")
