@@ -18,8 +18,9 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 | Fichier | Rôle |
 | --- | --- |
 | `index.html`, `styles.css`, `app.js` | La page d’accueil |
+| `alignement.html`, `alignement.js` | Alignement et statistiques |
 | `scripts/fetch-data.mjs` | Récupère les données (Node 20, sans dépendance) |
-| `data/` | `schedule.json`, `scoreboard.json`, `standings.json`, `meta.json` |
+| `data/` | `schedule.json`, `scoreboard.json`, `standings.json`, `roster.json`, `stats.json`, `meta.json` |
 | `.github/workflows/data.yml` | Mise à jour des données aux 15 minutes (et sur demande) |
 | `.github/workflows/pages.yml` | Déploiement sur GitHub Pages depuis `main` |
 | `worker/` | Proxy Cloudflare pour le pointage en direct |
@@ -31,6 +32,14 @@ node scripts/fetch-data.mjs
 python3 -m http.server 8000
 # puis ouvrir http://localhost:8000
 ```
+
+## Alignement et statistiques
+
+- `data/roster.json` : `/v1/roster/MTL/current` (numéro, nom, position, date de naissance, main).
+- `data/stats.json` : `/v1/club-stats/MTL/now` (patineurs : PJ, B, A, PTS, +/- ; gardiens : PJ, V, D, DP, %ARR, MOY).
+- Les liens vers les photos des joueurs sont retirés des fichiers : aucune photo n’est affichée.
+- L’âge est calculé à la date du jour (heure de l’Est). Les meneurs (points, buts, passes) sont calculés à partir de `stats.json`. Les égalités sont toutes nommées (deux noms au plus, puis « +N »).
+- Si une source est en échec, la section concernée affiche un message d’erreur et le pied de page la nomme.
 
 ## Worker Cloudflare (pointage en direct)
 
