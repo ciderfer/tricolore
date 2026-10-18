@@ -125,7 +125,7 @@
     const p = g.periodDescriptor;
     const period = !p ? "En cours"
       : p.periodType === "OT" ? "Prolongation" : p.periodType === "SO" ? "Tirs de barrage"
-      : `${Number(p.number) || ""}<span class="lc">e</span> période`;
+      : `<span class="ord">${Number(p.number) || ""}<span class="lc">${Number(p.number) === 1 ? "re" : "e"}</span></span> période`;
     const clock = final ? "" : g.clock?.inIntermission ? "Entracte" : g.clock?.timeRemaining ? `${esc(g.clock.timeRemaining)} à jouer` : "";
     const row = (t, side) => `<div class="board-row ${t.abbrev === MTL ? "mtl" : ""}">
       <div class="name cond">${esc(loc(t.commonName))}<small>${side}</small></div>

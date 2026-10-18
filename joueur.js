@@ -87,8 +87,10 @@
       const line = g
         ? [DEC[x.decision] || "Sans décision", fin(x.shotsAgainst) && fin(x.goalsAgainst) ? `${x.shotsAgainst - x.goalsAgainst}/${x.shotsAgainst} arrêts` : "", fin(x.savePctg) ? pct(x.savePctg) : "", x.toi || ""]
         : [`${n(x.goals)} B, ${n(x.assists)} A`, `${signed(x.plusMinus)}`, fin(x.shots) ? `${x.shots} tir${x.shots > 1 ? "s" : ""}` : "", fin(x.pim) && x.pim ? `${x.pim} min` : "", x.toi || ""];
+      const id = /^\d{10}$/.test(String(x.gameId)) ? x.gameId : null;
+      const who = `<span class="pl-name cond">${x.homeRoadFlag === "H" ? "vs" : "@"} ${esc(x.opponentAbbrev || "")}</span>`;
       return `<li class="pl"><span class="l5-date">${esc(fGameDay.format(new Date(x.gameDate + "T12:00:00Z")).replace(/\./g, ""))}</span>
-        <span class="pl-id"><span class="pl-name cond">${x.homeRoadFlag === "H" ? "vs" : "@"} ${esc(x.opponentAbbrev || "")}</span><span class="pl-info">${line.filter(Boolean).map(esc).join(" · ")}</span></span>
+        ${id ? `<a class="pl-link pl-id" href="match.html?id=${id}">` : `<span class="pl-id">`}${who}<span class="pl-info">${line.filter(Boolean).map(esc).join(" · ")}</span>${id ? "</a>" : "</span>"}
         ${!g && fin(x.points) ? `<span class="l5-pts num">${x.points}</span>` : ""}</li>`;
     }).join("");
     return `<section class="blk">${h}<ul class="roster l5">${rows}</ul><p class="legend">vs à domicile · @ à l’étranger${g ? " · V victoire · D défaite · DP défaite en prolongation ou tirs de barrage" : " · à droite : points du match"}.</p></section>`;

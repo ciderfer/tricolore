@@ -62,7 +62,7 @@ body{margin:0;background:var(--red);color:var(--white);font:500 18px/1.35 Archiv
 .ldr-v{font-size:52px;line-height:1;margin-top:4px}
 .ldr-n{font-size:20px;line-height:1;margin-top:4px;overflow-wrap:anywhere}
 .grp{margin:16px -18px 0;padding:5px 18px;background:var(--blue)}
-.grp span{opacity:.7;margin-left:4px}
+.grp span:not(.lc,.ord){opacity:.7;margin-left:4px}
 .roster{list-style:none;margin:0;padding:0}
 .pl{display:grid;grid-template-columns:52px 1fr;gap:12px;align-items:center;padding-top:8px;padding-bottom:8px}
 .roster .pl:nth-child(even){background:var(--zebra-red)}
@@ -182,7 +182,7 @@ a.res-a .s::after{content:"›";font-family:Archivo;font-size:22px;line-height:4
 .hero-more{margin:14px 18px 0}
 .cg-link{position:absolute;inset:0;z-index:1}
 .cg-more{font-size:11px;font-weight:800;letter-spacing:.1em;opacity:.8}
-.lbl .lc{letter-spacing:0}
+.lbl .lc,.lbl .ord{letter-spacing:0}
 /* Résultats */
 .blk{padding:24px 18px}
 .h{font-size:44px;line-height:.9;margin:0 0 14px}
