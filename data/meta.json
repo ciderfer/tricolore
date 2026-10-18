@@ -1,5 +1,6 @@
 {
-  "updatedAt": "2026-10-18T14:48:03.176Z",
+  "updatedAt": "2026-10-18T15:47:37.115Z",
+  "checkedAt": "2026-10-18T15:47:37.115Z",
   "sources": {
     "schedule": {
       "ok": true,
@@ -12,6 +13,28 @@
     "standings": {
       "ok": true,
       "url": "https://api-web.nhle.com/v1/standings/2026-10-17"
+    }
+  },
+  "news": {
+    "lnh": {
+      "ok": true,
+      "name": "LNH.com"
+    },
+    "lapresse": {
+      "ok": true,
+      "name": "La Presse"
+    },
+    "jdm": {
+      "ok": true,
+      "name": "Journal de Montréal"
+    },
+    "radiocanada": {
+      "ok": true,
+      "name": "Radio-Canada"
+    },
+    "ledevoir": {
+      "ok": true,
+      "name": "Le Devoir"
     }
   }
 }
