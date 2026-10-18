@@ -18,9 +18,8 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 | Fichier | Rôle |
 | --- | --- |
 | `index.html`, `styles.css`, `app.js` | La page d’accueil |
-| `alignement.html`, `alignement.js` | Alignement et statistiques |
 | `scripts/fetch-data.mjs` | Récupère les données (Node 20, sans dépendance) |
-| `data/` | `schedule.json`, `scoreboard.json`, `standings.json`, `roster.json`, `stats.json`, `meta.json` |
+| `data/` | `schedule.json`, `scoreboard.json`, `standings.json`, `meta.json` |
 | `.github/workflows/data.yml` | Mise à jour des données aux 15 minutes (et sur demande) |
 | `.github/workflows/pages.yml` | Déploiement sur GitHub Pages depuis `main` |
 | `worker/` | Proxy Cloudflare pour le pointage en direct |
@@ -34,6 +33,8 @@ python3 -m http.server 8000
 ```
 
 ## Alignement et statistiques
+
+Page `alignement.html` (script `alignement.js`), accessible par l’onglet « Alignement ».
 
 - `data/roster.json` : `/v1/roster/MTL/current` (numéro, nom, position, date de naissance, main).
 - `data/stats.json` : `/v1/club-stats/MTL/now` (patineurs : PJ, B, A, PTS, +/- ; gardiens : PJ, V, D, DP, %ARR, MOY).
