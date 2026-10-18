@@ -1,0 +1,103 @@
+/* Polices auto-hébergées (SIL Open Font License, voir fonts/OFL-*.txt) */
+@font-face{font-family:"Archivo";font-style:normal;font-weight:500 900;font-stretch:62% 125%;font-display:swap;
+  src:url(fonts/archivo-latin.woff2) format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Graduate";font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/graduate-latin.woff2) format("woff2")}
+
+:root{--red:#AF1E2D;--red2:#9a1826;--blue:#192168;--white:#fff;--cream:#f7f5f0;--ink:#121640}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--red);color:var(--white);font:500 18px/1.35 Archivo,"Arial Narrow",sans-serif;font-stretch:100%}
+.num{font-family:Graduate,serif;font-weight:400;letter-spacing:-.02em}
+.cond{font-stretch:62%;font-weight:900;text-transform:uppercase;letter-spacing:-.005em}
+.lbl{font-stretch:100%;font-weight:800;font-size:12.5px;letter-spacing:.2em;text-transform:uppercase}
+/* Bande du chandail : blanc / bleu / blanc */
+.band{background:var(--blue);border-top:10px solid var(--white);border-bottom:10px solid var(--white);position:relative}
+.sleeve{height:46px;background:linear-gradient(var(--white) 0 8px,var(--blue) 8px 38px,var(--white) 38px)}
+/* Héros rouge */
+.hero{padding:calc(14px + env(safe-area-inset-top)) 0 26px;overflow:hidden;position:relative}
+.top{display:flex;justify-content:space-between;align-items:center;padding:0 18px}
+.wordmark{font-stretch:62%;font-weight:900;font-size:26px;letter-spacing:.04em;text-transform:uppercase}
+.wordmark i{font-style:normal;display:inline-block;width:9px;height:9px;background:var(--white);margin:0 3px 3px;border-radius:50%;box-shadow:0 0 0 3px var(--blue)}
+.top .lbl{opacity:.85}
+.kick{margin:26px 18px 0;display:inline-block;background:var(--white);color:var(--red);padding:5px 10px 4px}
+.datebig{display:flex;align-items:flex-end;gap:12px;margin:10px 0 0 -8px}
+.datebig .day{font-size:172px;line-height:.78;color:var(--white)}
+.datebig .side{padding-bottom:6px}
+.datebig .wd{font-size:46px;line-height:.9}
+.datebig .mo{font-size:46px;line-height:.9;color:var(--blue);-webkit-text-stroke:0}
+.opp{margin:20px 18px 0;border-top:4px solid var(--white);padding-top:12px}
+.opp .vs{font-size:20px;font-weight:800;font-stretch:100%;opacity:.9}
+.opp .name{font-size:84px;line-height:.86;display:block}
+.opp .place{font-size:18px;font-weight:600;display:block;margin-top:6px}
+.time{margin:14px 18px 0;display:flex;align-items:baseline;gap:12px;font-size:58px;line-height:.9;white-space:nowrap}
+.time .hh{font-family:Archivo;font-stretch:62%;font-weight:900;font-size:.6em;margin:0 .05em}
+.time small{font-family:Archivo;font-stretch:100%;font-weight:800;font-size:13px;letter-spacing:.16em;opacity:.9}
+.meta{margin:16px 18px 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-weight:700}
+.chip{background:var(--blue);color:var(--white);font-stretch:100%;font-weight:800;font-size:15px;padding:5px 9px;letter-spacing:.06em}
+.chip.w{background:var(--white);color:var(--red)}
+/* Fiche dans la bande */
+.rec{padding:18px 18px 16px;display:grid;grid-template-columns:auto 1fr;gap:4px 16px;align-items:center}
+.rec .big{font-size:76px;line-height:.9;grid-row:span 2}
+.rec .pts{font-size:34px;line-height:.9}
+.rec .pts span{font-size:16px;font-stretch:100%;font-weight:800;letter-spacing:.14em;margin-left:4px}
+.rec .rank{font-weight:700;font-size:16px;line-height:1.25;color:#d8dcff}
+/* Résultats */
+.blk{padding:24px 18px}
+.h{font-size:44px;line-height:.9;margin:0 0 14px}
+.res{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;padding:10px 0;border-top:2px solid rgba(255,255,255,.28)}
+.res:first-of-type{border-top:4px solid var(--white)}
+.code{height:52px;display:grid;place-items:center;font-stretch:62%;font-weight:900;font-size:28px;background:var(--white);color:var(--red)}
+.code.D{background:var(--blue);color:var(--white)}
+.code.DP{background:transparent;color:var(--white);box-shadow:inset 0 0 0 3px var(--white)}
+.res .o{font-size:30px;line-height:.95}
+.res .o small{display:block;font-family:Archivo;font-stretch:100%;font-weight:700;font-size:13px;letter-spacing:.07em;text-transform:uppercase;opacity:.85;margin-top:4px;white-space:nowrap}
+.res .s{font-size:40px;line-height:1;text-align:right;white-space:nowrap}
+.res .s small{display:block;font-family:Archivo;font-stretch:100%;font-size:12px;font-weight:800;letter-spacing:.14em;text-align:right}
+.legend{font-size:13.5px;font-weight:600;opacity:.85;margin:10px 0 0}
+/* Classement : chandail blanc */
+.white{background:var(--cream);color:var(--ink)}
+.white .h{color:var(--blue)}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{font-stretch:100%;font-weight:800;font-size:12px;letter-spacing:.16em;color:#6a6e8c;text-align:right;padding:0 5px 6px;border-bottom:4px solid var(--blue)}
+td{text-align:right;padding:8px 5px;font-size:19px;font-weight:700;border-bottom:2px solid #e3e0d6}
+th:nth-child(2),td:nth-child(2){text-align:left}
+td:nth-child(2){font-stretch:62%;font-weight:900;font-size:24px;text-transform:uppercase;letter-spacing:.01em}
+td:first-child,th:first-child{text-align:left;width:26px}
+td:first-child{font-family:Graduate;color:#9a9db5}
+td.pts{font-family:Graduate;font-size:21px;color:var(--blue)}
+tr.mtl td{background:var(--red);color:var(--white);border-bottom-color:var(--red)}
+tr.mtl td:first-child,tr.mtl td.pts{color:var(--white)}
+tr.mtl td:first-child{box-shadow:-18px 0 0 var(--red)}
+tr.mtl td:last-child{box-shadow:18px 0 0 var(--red)}
+.asof{font-size:14px;font-weight:600;color:#6a6e8c;margin:10px 0 0}
+/* Nouvelles */
+.news{background:var(--blue)}
+.news .h{color:var(--white)}
+.news p{margin:0;font-size:17px;color:#d8dcff;max-width:30ch}
+.soon{display:inline-block;margin-bottom:12px;background:var(--red);padding:6px 10px 5px}
+.err{background:var(--white);color:var(--red);padding:12px;font-weight:700;font-stretch:100%}
+footer{background:var(--blue);color:#aeb3e0;font-size:13.5px;font-weight:500;padding:4px 18px calc(30px + env(safe-area-inset-bottom));border-top:0}
+footer p{margin:4px 0}
+.loading{padding:120px 18px;font-stretch:62%;font-weight:900;font-size:40px;text-transform:uppercase}
+sup{font-size:.62em;line-height:0;vertical-align:.5em}
+.time small{letter-spacing:.06em;font-size:14px;line-height:1.15;text-transform:none;font-weight:700}
+.rec .rank{font-size:17px}
+/* Match en direct */
+.live-kick{background:var(--white);color:var(--red)}
+.live-kick::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-right:7px;vertical-align:1px}
+.board{margin:18px 18px 0;border-top:4px solid var(--white)}
+.board-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;padding:10px 0;border-bottom:2px solid rgba(255,255,255,.28)}
+.board-row .name{font-size:54px;line-height:.9}
+.board-row .name small{display:block;font-family:Archivo;font-stretch:100%;font-weight:700;font-size:14px;text-transform:none;letter-spacing:.04em;margin-top:4px;opacity:.9}
+.board-row .sc{font-size:76px;line-height:.9}
+.board-row.mtl .name{color:var(--white)}
+.board-row:not(.mtl) .name{color:#ffd9dc}
+.state{margin:14px 18px 0;font-weight:800;font-stretch:100%;font-size:20px}
+.state small{display:block;font-weight:600;font-size:14px;opacity:.85;margin-top:2px}
+.foot-warn{color:var(--white);font-weight:800}
+.lc{text-transform:none}
+.rec .rank{font-size:16px;font-stretch:87.5%}
+.rec .big{white-space:nowrap;font-size:68px}
+.rec{gap:4px 14px}

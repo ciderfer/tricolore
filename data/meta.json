@@ -1,0 +1,17 @@
+{
+  "updatedAt": "2026-10-18T14:48:03.176Z",
+  "sources": {
+    "schedule": {
+      "ok": true,
+      "url": "https://api-web.nhle.com/v1/club-schedule-season/MTL/20262027"
+    },
+    "scoreboard": {
+      "ok": true,
+      "url": "https://api-web.nhle.com/v1/scoreboard/MTL/now"
+    },
+    "standings": {
+      "ok": true,
+      "url": "https://api-web.nhle.com/v1/standings/2026-10-17"
+    }
+  }
+}
