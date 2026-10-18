@@ -233,7 +233,7 @@
     };
     const lines = inside
       ? cmp("Coussin sur la 1<sup>re</sup> équipe exclue", firstOut, true)
-      : cmp(`Dernière place en séries (2<sup>e</sup> équipe repêchée)`, wc2, false) + (div3 ? cmp(`3<sup>e</sup> place ${divName}`, div3, false) : "");
+      : cmp(`2<sup>e</sup> équipe repêchée`, wc2, false) + (div3 ? cmp(`3<sup>e</sup> place ${divName}`, div3, false) : "");
     const showN = Math.min(wc.length, Math.max(5, (me.wildcardSequence || 0) + 1));
     const rows = wc.slice(0, showN).map((t) => {
       const isMe = t.teamAbbrev.default === MTL;
