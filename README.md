@@ -51,6 +51,13 @@ Page `calendrier.html` (script `calendrier.js`), onglet « Calendrier ». Elle l
 - Le prochain match (même règle que l’accueil) est mis en évidence et amené à l’écran au chargement.
 - Si `schedule.json` manque ou si la source est en échec dans `meta.json`, un message d’erreur s’affiche.
 
+## Calendrier à s’abonner (.ics)
+
+- `data/canadiens.ics`, écrit par la tâche planifiée (`scripts/ics.mjs`) à partir de `schedule.json` : saison régulière et séries (pas les matchs préparatoires).
+- Abonnement iPhone : bouton « Ajouter à mon calendrier » de la page Calendrier (`webcal://ciderfer.github.io/tricolore/data/canadiens.ics`). Le fichier peut aussi être téléchargé.
+- Un événement par match : « Sharks @ Canadiens », heures en UTC (affichées à l’heure locale), durée 2 h 45, aréna et ville, télé, pointage final une fois le match joué, lien vers la feuille de match. UID stable (identifiant LNH) : pas de doublon aux mises à jour.
+- Le fichier n’est réécrit que si un match change (les DTSTAMP ne comptent pas dans la comparaison).
+
 ## Alignement et statistiques
 
 Page `alignement.html` (script `alignement.js`), accessible par l’onglet « Alignement ».

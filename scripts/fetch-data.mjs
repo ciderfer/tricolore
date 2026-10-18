@@ -12,10 +12,12 @@
 //   en échec : la page affiche alors un message d'erreur au lieu de données périmées.
 // - Si rien n'a changé (données et état des sources) et que checkedAt a moins de 45 min,
 //   aucun fichier n'est réécrit (donc aucun commit).
+// - data/canadiens.ics : calendrier à s'abonner (voir scripts/ics.mjs), réécrit seulement si un match change.
 // - data/news.json : manchettes (titre, source, date, lien seulement), voir scripts/news.mjs.
 //   L'état de chaque source de nouvelles est noté dans meta.json (champ news).
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { fetchNews } from "./news.mjs";
+import { buildIcs, withoutStamps } from "./ics.mjs";
 
 const BASE = "https://api-web.nhle.com/v1";
 const SOURCES = {
@@ -56,6 +58,19 @@ for (const [name, path] of Object.entries(SOURCES)) {
   }
 }
 
+// Calendrier iCalendar : seulement si le calendrier a été lu avec succès à cette exécution.
+let icsCount = null;
+if (sources.schedule?.ok) {
+  try {
+    const { text, count } = buildIcs(JSON.parse(await readText("schedule.json")));
+    icsCount = count;
+    if (withoutStamps(text) !== withoutStamps(await readText("canadiens.ics"))) {
+      await writeFile(new URL("canadiens.ics", DIR), text);
+      changed = true;
+    }
+  } catch (err) { console.log(`ÉCHEC calendrier .ics (${err?.message || err})`); }
+}
+
 // Nouvelles : les noms des joueurs actuels aident à filtrer les flux hockey.
 let rosterNames = [];
 try {
@@ -90,4 +105,5 @@ console.log(changed ? "Données modifiées." : heartbeat ? "Aucun changement (v�
 for (const [n, s] of Object.entries(sources)) console.log(`${s.ok ? "OK   " : "ÉCHEC"} ${n} ${s.url}${s.error ? ` (${s.error})` : ""}`);
 for (const [n, s] of Object.entries(newsStatus)) console.log(`${s.ok ? "OK   " : "ÉCHEC"} nouvelles/${n}${s.error ? ` (${s.error})` : ""}`);
 console.log(`${news.items.length} manchettes retenues.`);
+if (icsCount !== null) console.log(`${icsCount} matchs dans canadiens.ics.`);
 if (Object.values(sources).every((s) => !s.ok)) process.exitCode = 1;
