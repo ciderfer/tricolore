@@ -101,3 +101,10 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
 .rec .rank{font-size:16px;font-stretch:87.5%}
 .rec .big{white-space:nowrap;font-size:68px}
 .rec{gap:4px 14px}
+/* Avertissements */
+.stale{background:#fff3c4;color:#5a3d00;font-weight:700;font-size:15px;padding:12px 18px;border-top:4px solid #e0a800}
+.warn-note{display:block;margin-top:8px;background:var(--white);color:var(--red);font-weight:700;font-size:14px;padding:8px 10px}
+.hero-note{margin:14px 18px 0}
+.datebig.l .wd,.datebig.l .mo{font-size:38px}
+.datebig.xl .day{font-size:150px}
+.datebig.xl .wd,.datebig.xl .mo{font-size:36px}

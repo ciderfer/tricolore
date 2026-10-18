@@ -1,0 +1,5 @@
+name = "tricolore"
+main = "index.js"
+compatibility_date = "2026-05-01"
+account_id = "07474c841454930c64f4fd78088ca948"
+workers_dev = true

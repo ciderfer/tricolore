@@ -3,10 +3,13 @@
 //
 // - data/<source>.json : réponse brute de l'API (seul le champ volatil
 //   standings.standingsDateTimeUtc est retiré pour éviter un commit à chaque exécution).
-// - data/meta.json : heure de la dernière modification et état de chaque source.
+// - data/meta.json : updatedAt (dernière modification des données), checkedAt (dernière
+//   vérification réussie, rafraîchie au moins aux 45 min pour que la page détecte un arrêt)
+//   et état de chaque source.
 // - Si une source échoue, son ancien fichier est conservé, mais meta.json la marque
 //   en échec : la page affiche alors un message d'erreur au lieu de données périmées.
-// - Si rien n'a changé (données et état des sources), aucun fichier n'est réécrit.
+// - Si rien n'a changé (données et état des sources) et que checkedAt a moins de 45 min,
+//   aucun fichier n'est réécrit (donc aucun commit).
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 
 const BASE = "https://api-web.nhle.com/v1";
@@ -46,9 +49,19 @@ for (const [name, path] of Object.entries(SOURCES)) {
 }
 
 if (JSON.stringify(sources) !== JSON.stringify(oldMeta?.sources)) changed = true;
-if (changed) {
-  await writeFile(new URL("meta.json", DIR), JSON.stringify({ updatedAt: new Date().toISOString(), sources }, null, 2) + "\n");
+const now = new Date();
+const HEARTBEAT_MS = 45 * 60 * 1000;
+const lastCheck = Date.parse(oldMeta?.checkedAt || oldMeta?.updatedAt || 0) || 0;
+const anyOk = Object.values(sources).some((s) => s.ok);
+const heartbeat = anyOk && now - lastCheck > HEARTBEAT_MS;
+if (changed || heartbeat) {
+  const meta = {
+    updatedAt: changed ? now.toISOString() : oldMeta?.updatedAt || now.toISOString(),
+    checkedAt: anyOk ? now.toISOString() : oldMeta?.checkedAt || null,
+    sources,
+  };
+  await writeFile(new URL("meta.json", DIR), JSON.stringify(meta, null, 2) + "\n");
 }
-console.log(changed ? "Données modifiées." : "Aucun changement.");
+console.log(changed ? "Données modifiées." : heartbeat ? "Aucun changement (vérification notée)." : "Aucun changement.");
 for (const [n, s] of Object.entries(sources)) console.log(`${s.ok ? "OK   " : "ÉCHEC"} ${n} ${s.url}${s.error ? ` (${s.error})` : ""}`);
 if (Object.values(sources).every((s) => !s.ok)) process.exitCode = 1;
