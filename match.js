@@ -61,8 +61,8 @@
     if (!pd) return "";
     const reg = pd.maxRegulationPeriods || 3;
     if (pd.periodType === "SO") return "Tirs de barrage";
-    if (pd.periodType === "OT") { const k = pd.number - reg; return k > 1 ? `${k}<span class="lc">e</span> prolongation` : "Prolongation"; }
-    return pd.number === 1 ? `1<span class="lc">re</span> période` : `${pd.number}<span class="lc">e</span> période`;
+    if (pd.periodType === "OT") { const k = pd.number - reg; return k > 1 ? `<span class="ord">${k}<span class="lc">e</span></span> prolongation` : "Prolongation"; }
+    return `<span class="ord">${pd.number}<span class="lc">${pd.number === 1 ? "re" : "e"}</span></span> période`;
   }
   const teamName = (t) => loc(t.commonName) || t.abbrev;
   const STRENGTH = { pp: ["AN", "Avantage numérique"], sh: ["DN", "Désavantage numérique"] };
