@@ -72,14 +72,14 @@
     roughing: "rudesse", "cross-checking": "double-échec", boarding: "mise en échec contre la bande", fighting: "bagarre",
     "too-many-men-on-the-ice": "trop de joueurs sur la glace", "delay-of-game": "retarder le match", "delay-of-game-puck-over-glass": "retarder le match (rondelle hors de la patinoire)",
     "unsportsmanlike-conduct": "conduite antisportive", charging: "charge", "interference-goalkeeper": "obstruction sur le gardien",
-    "goalie-interference": "obstruction sur le gardien", "holding-the-stick": "retenir le bâton", embellishment: "embellissement",
-    kneeing: "coup de genou", spearing: "darder", misconduct: "inconduite", "game-misconduct": "inconduite de partie",
-    "match-penalty": "pénalité de match", "butt-ending": "six-pouces", "head-butting": "coup de tête", clipping: "assaut à basse hauteur",
+    "goalie-interference": "obstruction sur le gardien", "holding-the-stick": "retenir le bâton", embellishment: "plongeon",
+    kneeing: "coup de genou", spearing: "darder", misconduct: "inconduite", "game-misconduct": "inconduite de match",
+    "match-penalty": "pénalité de match", "butt-ending": "six-pouces", "head-butting": "coup de tête", clipping: "mise en échec à basse hauteur",
     "illegal-check-to-head": "mise en échec illégale à la tête", "closing-hand-on-puck": "refermer la main sur la rondelle",
     "abuse-of-officials": "abus envers les officiels", "instigator": "instigateur", "throwing-equipment": "lancer de l’équipement",
   };
   const penName = (k) => PEN[k] || String(k || "pénalité").replace(/-/g, " ");
-  const DECISION = { W: "Victoire", L: "Défaite", O: "Défaite (prol./T.B.)" };
+  const DECISION = { W: "Victoire", L: "Défaite", O: "Défaite (prol./TB)" };
   const initial = (p) => (p ? `${loc(p.firstName).charAt(0)}. ${loc(p.lastName)}` : "");
 
   function hero(L, B, at, note) {
@@ -159,7 +159,7 @@
   function stars(L) {
     const s = L.summary?.threeStars;
     if (!Array.isArray(s) || !s.length) return "";
-    return `<section class="band"><div class="leaders-wrap"><div class="lbl band-lbl">Trois étoiles</div><div class="leaders">
+    return `<section class="band"><div class="leaders-wrap"><div class="lbl band-lbl">Les trois étoiles</div><div class="leaders">
       ${[...s].sort((a, b) => a.star - b.star).map((p) => `<div class="ldr"><div class="lbl">${"★".repeat(p.star)}</div><div class="ldr-n cond">${esc(loc(p.name))}</div>
         <div class="star-line">${esc(p.teamAbbrev || "")}${p.position === "G" ? (fin(p.savePctg) ? ` · ${pct(p.savePctg)}` : "") : fin(p.goals) ? ` · ${p.goals} B, ${p.assists ?? 0} A` : ""}</div></div>`).join("")}
       </div></div></section>`;
