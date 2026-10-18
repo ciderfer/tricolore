@@ -84,9 +84,19 @@
     const left = games.filter((g) => !DONE.has(g.gameState) && g.gameType !== 1).length;
     return `${h}<section class="band"><div class="cal-sum"><span><b class="num">${played}</b> joués</span><span><b class="num">${left}</b> à venir</span>
       ${next ? `<a href="#prochain" class="cal-jump">Prochain ›</a>` : ""}</div></section>
+      ${icsBlock()}
       ${[...months.values()].map((list) => `<section class="blk cal-month"><h2 class="h cond">${esc(cap(fMonthName.format(new Date(list[0].startTimeUTC))))}</h2>
         <ul class="cal">${list.map((g) => row(g, g === next)).join("")}</ul></section>`).join("")}
       <section class="blk cal-legend"><p class="legend">V victoire · D défaite · Prol. en prolongation · T.B. en tirs de barrage. Pointage du CH en premier. Heures de l’Est. Saison régulière et séries comptées dans « joués » et « à venir » (matchs préparatoires exclus).</p></section>`;
+  }
+  // Abonnement au calendrier : webcal:// pour que l'iPhone s'abonne (mises à jour automatiques),
+  // plus un lien de téléchargement du fichier .ics (écrit par la tâche planifiée, data/canadiens.ics).
+  function icsBlock() {
+    const file = new URL("data/canadiens.ics", location.href);
+    const webcal = file.href.replace(/^https?:/, "webcal:");
+    return `<section class="blk ics"><a class="ics-btn" href="${esc(webcal)}">Ajouter à mon calendrier</a>
+      <p class="ics-note">Abonnement : les matchs de la saison (et des séries) s’ajoutent à votre calendrier et se mettent à jour d’eux-mêmes (heure, télé, pointage final).
+      Sinon, <a href="${esc(file.href)}" download="canadiens.ics">télécharger le fichier .ics</a> (sans mise à jour).</p></section>`;
   }
   function seasonText(d) {
     const s = String(d.schedule?.currentSeason || "");
