@@ -280,6 +280,7 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
 .news-meta b{color:var(--white);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:12px;background:var(--red);padding:2px 6px;margin-right:2px}
 .news-fail{margin:14px 0 0;padding:8px 10px;font-size:14px;font-weight:700;color:var(--white);background:var(--red);font-stretch:100%;letter-spacing:0}
 .news-note{margin:14px 0 0;font-size:13px;color:#aeb3e0;font-stretch:100%;letter-spacing:0}
+.faf{display:none}
 /* ---------- Grand écran : mêmes pages, le téléphone ne change pas ---------- */
 /* Accueil, match, joueur : une colonne centrée, comme un site web. Calendrier et alignement : en colonnes. */
 @media (min-width:1024px){
@@ -290,6 +291,24 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
   .tabs{padding-left:calc(var(--gut) + 10px);padding-right:calc(var(--gut) + 10px)}
   footer{padding-left:calc(var(--gut) + 18px);padding-right:calc(var(--gut) + 18px)}
   main{max-width:var(--maxw);margin:0 auto;background:var(--red)}
+  /* Accueil plein : héros en deux moitiés (match | face-à-face), fiche en une rangée, titres sur une ligne */
+  .h br{display:none}
+  .hero:has(>.faf){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:28px;align-content:start}
+  .hero:has(>.faf)>*{grid-column:1}
+  .hero:has(>.faf)>.top{grid-column:1/-1}
+  .hero:has(>.faf)>.kick{justify-self:start}
+  .faf{display:block;grid-column:2!important;grid-row:2/span 5;align-self:center;margin-right:18px}
+  .faf-r{display:grid;grid-template-columns:1fr 120px 120px;gap:10px;align-items:baseline;padding:7px 10px;font-weight:700;font-size:16px}
+  .faf-r:nth-child(odd):not(.faf-h){background:var(--zebra-red)}
+  .faf-h{padding-bottom:6px}
+  .faf-h .cond{font-size:22px;text-align:right;overflow-wrap:anywhere}
+  .faf-l{color:#ffd9dc;font-size:14px;font-weight:600}
+  .faf-v{text-align:right;font-family:Graduate,serif;font-weight:400;font-size:19px;white-space:nowrap}
+  .faf-v.t{font-family:Archivo,sans-serif;font-weight:800;font-size:15px;white-space:normal}
+  .faf-n{margin:10px 10px 0;font-size:13px;font-weight:600;color:#ffd9dc}
+  .rec{display:flex;align-items:center;justify-content:space-between;gap:28px}
+  .rec .rank{display:flex;gap:28px;font-size:22px;font-weight:800;font-stretch:87.5%;color:var(--white)}
+  .rec .rank br{display:none}
   /* Calendrier : mois côte à côte */
   main:has(>.cal-month){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:18px}
   main:has(>.cal-month)>:not(.cal-month){grid-column:1/-1}
