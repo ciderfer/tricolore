@@ -1,0 +1,16 @@
+{
+  "name": "Tricolore",
+  "short_name": "Tricolore",
+  "description": "Prochain match, résultats, classement, alignement et nouvelles du Canadien de Montréal. Site de partisan non officiel.",
+  "lang": "fr-CA",
+  "start_url": "/tricolore/",
+  "scope": "/tricolore/",
+  "display": "standalone",
+  "background_color": "#AF1E2D",
+  "theme_color": "#192168",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
