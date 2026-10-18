@@ -19,7 +19,8 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 | --- | --- |
 | `index.html`, `styles.css`, `app.js` | La page d’accueil |
 | `scripts/fetch-data.mjs` | Récupère les données (Node 20, sans dépendance) |
-| `data/` | `schedule.json`, `scoreboard.json`, `standings.json`, `meta.json` |
+| `scripts/news.mjs` | Sources de nouvelles et filtre « Canadien » |
+| `data/` | `schedule.json`, `scoreboard.json`, `standings.json`, `news.json`, `meta.json` |
 | `.github/workflows/data.yml` | Mise à jour des données aux 15 minutes (et sur demande) |
 | `.github/workflows/pages.yml` | Déploiement sur GitHub Pages depuis `main` |
 | `worker/` | Proxy Cloudflare pour le pointage en direct |
@@ -47,6 +48,20 @@ npx wrangler deploy
 - Le Worker n’est pas déployé par GitHub Actions pour l’instant (pas de jeton d’API).
 - Test local : `npx wrangler dev --port 8787` dans `worker/`, puis ouvrir le site avec `?worker=http://localhost:8787`.
 
-## À venir
+## Nouvelles
 
-- Nouvelles : manchettes de flux RSS publics (titre, source, date et lien seulement).
+Récupérées par la tâche planifiée (`scripts/news.mjs`), jamais dans le navigateur.
+
+| Source | Flux |
+| --- | --- |
+| LNH.com | API de contenu de la LNH (`forge-dapi`, étiquette `teamid-8`, fr-CA) |
+| La Presse | `lapresse.ca/sports/hockey/rss` |
+| Journal de Montréal | `journaldemontreal.com/sports/hockey/rss.xml` |
+| Radio-Canada | `ici.radio-canada.ca/rss/771` (sports) |
+| Le Devoir | `ledevoir.com/rss/section/sports.xml` |
+
+- On garde seulement **titre, source, date et lien**. Aucun résumé, aucun texte d’article, aucune image.
+- Filtre : le titre doit parler du Canadien (Canadien, CH, Tricolore, Habs, Centre Bell, Martin St-Louis). Pour les flux déjà consacrés au hockey, un nom de famille de l’alignement actuel suffit aussi.
+- 7 derniers jours, plus récent d’abord, doublons retirés (même lien ou même titre), au plus 3 par source et 8 au total.
+- Chaque source a son état dans `meta.json` (`news.<id>.ok`). Une source en échec est affichée « Source indisponible » sur la page et dans le pied de page, et ses anciennes manchettes ne sont pas conservées.
+- RDS et TVA Sports n’offrent pas de flux RSS public; ils ne sont pas inclus.

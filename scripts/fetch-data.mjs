@@ -10,7 +10,10 @@
 //   en échec : la page affiche alors un message d'erreur au lieu de données périmées.
 // - Si rien n'a changé (données et état des sources) et que checkedAt a moins de 45 min,
 //   aucun fichier n'est réécrit (donc aucun commit).
+// - data/news.json : manchettes (titre, source, date, lien seulement), voir scripts/news.mjs.
+//   L'état de chaque source de nouvelles est noté dans meta.json (champ news).
 import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { fetchNews } from "./news.mjs";
 
 const BASE = "https://api-web.nhle.com/v1";
 const SOURCES = {
@@ -48,7 +51,22 @@ for (const [name, path] of Object.entries(SOURCES)) {
   }
 }
 
+// Nouvelles : les noms des joueurs actuels aident à filtrer les flux hockey.
+let rosterNames = [];
+try {
+  const roster = await (await fetch(BASE + "/roster/MTL/current", { redirect: "follow", signal: AbortSignal.timeout(20_000) })).json();
+  rosterNames = ["forwards", "defensemen", "goalies"].flatMap((k) => roster[k] || []).map((p) => p.lastName?.default);
+} catch { /* filtre sur les mots de l'équipe seulement */ }
+const news = await fetchNews(rosterNames);
+const newsOk = Object.values(news.status).some((s) => s.ok);
+if (newsOk) {
+  const text = JSON.stringify({ items: news.items });
+  if (text !== (await readText("news.json"))) { await writeFile(new URL("news.json", DIR), text); changed = true; }
+}
+const newsStatus = Object.fromEntries(Object.entries(news.status).map(([k, v]) => [k, v.ok ? { ok: true, name: v.name } : v]));
+
 if (JSON.stringify(sources) !== JSON.stringify(oldMeta?.sources)) changed = true;
+if (JSON.stringify(newsStatus) !== JSON.stringify(oldMeta?.news)) changed = true;
 const now = new Date();
 const HEARTBEAT_MS = 45 * 60 * 1000;
 const lastCheck = Date.parse(oldMeta?.checkedAt || oldMeta?.updatedAt || 0) || 0;
@@ -59,9 +77,12 @@ if (changed || heartbeat) {
     updatedAt: changed ? now.toISOString() : oldMeta?.updatedAt || now.toISOString(),
     checkedAt: anyOk ? now.toISOString() : oldMeta?.checkedAt || null,
     sources,
+    news: newsStatus,
   };
   await writeFile(new URL("meta.json", DIR), JSON.stringify(meta, null, 2) + "\n");
 }
 console.log(changed ? "Données modifiées." : heartbeat ? "Aucun changement (vérification notée)." : "Aucun changement.");
 for (const [n, s] of Object.entries(sources)) console.log(`${s.ok ? "OK   " : "ÉCHEC"} ${n} ${s.url}${s.error ? ` (${s.error})` : ""}`);
+for (const [n, s] of Object.entries(newsStatus)) console.log(`${s.ok ? "OK   " : "ÉCHEC"} nouvelles/${n}${s.error ? ` (${s.error})` : ""}`);
+console.log(`${news.items.length} manchettes retenues.`);
 if (Object.values(sources).every((s) => !s.ok)) process.exitCode = 1;

@@ -47,6 +47,7 @@
       if (s && s.ok === false) { out.errors[n] = s.error || "échec"; out[n] = null; return; } // pas de données périmées
       try { out[n] = await getJson(n); } catch (e) { out.errors[n] = e.message; out[n] = null; }
     }));
+    try { out.news = await getJson("news"); } catch (e) { out.news = null; out.errors.news = e.message; }
     return out;
   }
 
@@ -153,12 +154,39 @@
       </tbody></table><p class="asof">Classement au ${esc(asOf)}</p></section>`;
   }
 
-  const news = `<section class="blk news"><div class="lbl soon">Bientôt</div><h2 class="h cond">Nouvelles</h2>
-    <p>Les manchettes arriveront ici : titre, source, date et lien vers l’article original. Rien d’autre.</p></section>`;
+  // Nouvelles : titre, source, date et lien seulement (aucun texte d'article).
+  const fRel = new Intl.RelativeTimeFormat("fr-CA", { numeric: "auto" });
+  const fNewsDate = F({ weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+  function ago(iso) {
+    const t = Date.parse(iso), min = Math.round((Date.now() - t) / 60000);
+    if (min < 1) return "à l’instant";
+    if (min < 60) return fRel.format(-min, "minute");
+    if (min < 24 * 60) return fRel.format(-Math.round(min / 60), "hour");
+    return fNewsDate.format(new Date(t));
+  }
+  function news(d) {
+    const h = `<h2 class="h cond">Nouvelles</h2>`;
+    const status = Object.values(d.meta?.news || {});
+    const failed = status.filter((s) => !s.ok);
+    const failNote = failed.length
+      ? `<p class="news-fail">Source indisponible : ${failed.map((s) => esc(s.name)).join(", ")}.</p>` : "";
+    const items = (d.news?.items || []).filter((i) => /^https:\/\//.test(i.url));
+    if (!items.length) {
+      const why = d.errors.news ? `fichier des nouvelles introuvable (${esc(d.errors.news)})`
+        : status.length && !status.some((s) => s.ok) ? "aucune source de nouvelles n’a répondu" : "aucune manchette récente sur le Canadien";
+      return `<section class="blk news">${h}<div class="err">Nouvelles : ${why}. Aucune manchette affichée plutôt qu’une manchette inventée.</div>${failNote}</section>`;
+    }
+    return `<section class="blk news">${h}<ul class="news-list">
+      ${items.map((i) => `<li><a href="${esc(i.url)}" target="_blank" rel="noopener noreferrer">
+        <span class="news-title">${esc(i.title)}</span>
+        <span class="news-meta"><b>${esc(i.source)}</b> · <time datetime="${esc(i.publishedAt)}">${esc(ago(i.publishedAt))}</time></span></a></li>`).join("")}
+      </ul>${failNote}<p class="news-note">Titres et liens vers les articles originaux. Les articles appartiennent à leurs médias.</p></section>`;
+  }
   const sleeve = `<div class="sleeve" aria-hidden="true"></div>`;
 
   function footer(d) {
-    const failed = Object.keys(SOURCE_LABEL).filter((n) => d.errors[n]).map((n) => SOURCE_LABEL[n]);
+    const failed = Object.keys(SOURCE_LABEL).filter((n) => d.errors[n]).map((n) => SOURCE_LABEL[n])
+      .concat(Object.values(d.meta?.news || {}).filter((s) => !s.ok).map((s) => `Nouvelles (${s.name})`));
     const when = d.meta?.updatedAt ? fStamp.format(new Date(d.meta.updatedAt)) : null;
     const checked = d.meta?.checkedAt ? fStamp.format(new Date(d.meta.checkedAt)) : null;
     return `<p>Données : API publique de la LNH${when ? ` · dernière modification le ${esc(when)}` : ""}${checked ? `, vérifiées le ${esc(checked)}` : ""}${when || checked ? " (heure de l’Est)" : ""}.</p>
@@ -175,7 +203,7 @@
     if (/^\d{8}$/.test(season)) seasonText = `Saison ${season.slice(0, 4)}-${season.slice(4)}`;
     const parts = [
       () => `<div id="hero-slot">${hero(d, byAbbr)}</div>`, () => staleBanner(d), () => band(d, me), () => results(d), () => sleeve,
-      () => standings(d, me, all), () => sleeve, () => news,
+      () => standings(d, me, all), () => sleeve, () => news(d),
     ];
     document.getElementById("app").innerHTML = parts.map((fn) => {
       try { return fn(); } catch (e) { console.error(e); return `<div class="blk">${errBox("Section", "erreur d’affichage")}</div>`; }

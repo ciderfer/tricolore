@@ -75,8 +75,6 @@ tr.mtl td:last-child{box-shadow:18px 0 0 var(--red)}
 /* Nouvelles */
 .news{background:var(--blue)}
 .news .h{color:var(--white)}
-.news p{margin:0;font-size:17px;color:#d8dcff;max-width:30ch}
-.soon{display:inline-block;margin-bottom:12px;background:var(--red);padding:6px 10px 5px}
 .err{background:var(--white);color:var(--red);padding:12px;font-weight:700;font-stretch:100%}
 footer{background:var(--blue);color:#aeb3e0;font-size:13.5px;font-weight:500;padding:4px 18px calc(30px + env(safe-area-inset-bottom));border-top:0}
 footer p{margin:4px 0}
@@ -108,3 +106,13 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
 .datebig.l .wd,.datebig.l .mo{font-size:38px}
 .datebig.xl .day{font-size:150px}
 .datebig.xl .wd,.datebig.xl .mo{font-size:36px}
+/* Nouvelles */
+.news-list{list-style:none;margin:0;padding:0;border-top:4px solid var(--white)}
+.news-list li{border-bottom:2px solid rgba(255,255,255,.22)}
+.news-list a{display:block;padding:13px 0 12px;color:var(--white);text-decoration:none}
+.news-list a:active{background:rgba(255,255,255,.08)}
+.news-title{display:block;font-weight:750;font-size:18px;line-height:1.25;font-stretch:100%;letter-spacing:0;word-spacing:.04em}
+.news-meta{display:block;margin-top:6px;font-size:13.5px;font-weight:600;color:#c3c8f2;font-stretch:100%;letter-spacing:0}
+.news-meta b{color:var(--white);font-weight:800;text-transform:uppercase;letter-spacing:.1em;font-size:12px;background:var(--red);padding:2px 6px;margin-right:2px}
+.news-fail{margin:14px 0 0;padding:8px 10px;font-size:14px;font-weight:700;color:var(--white);background:var(--red);font-stretch:100%;letter-spacing:0}
+.news-note{margin:14px 0 0;font-size:13px;color:#aeb3e0;font-stretch:100%;letter-spacing:0}
