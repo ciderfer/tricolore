@@ -53,7 +53,7 @@
         const x = g.gameOutcome?.lastPeriodType;
         const win = us.score > them.score;
         const code = win ? "V" : "D";
-        const extra = x === "OT" ? "Prol." : x === "SO" ? "T.B." : "";
+        const extra = x === "OT" ? "Prol." : x === "SO" ? "TB" : "";
         label = `${win ? "Victoire" : "Défaite"} ${us.score} à ${them.score}${extra ? (x === "OT" ? " en prolongation" : " en tirs de barrage") : ""}`;
         right = `<div class="cg-res" aria-label="${esc(label)}"><span class="cg-code ${code}${extra && !win ? " DP" : ""}">${code}</span><span class="num cg-score">${us.score}-${them.score}</span>${extra ? `<span class="cg-x">${extra}</span>` : ""}</div>`;
         extraCls = " done";
@@ -86,7 +86,7 @@
       ${next ? `<a href="#prochain" class="cal-jump">Prochain ›</a>` : ""}</div></section>
       ${[...months.values()].map((list) => `<section class="blk cal-month"><h2 class="h cond">${esc(cap(fMonthName.format(new Date(list[0].startTimeUTC))))}</h2>
         <ul class="cal">${list.map((g) => row(g, g === next)).join("")}</ul></section>`).join("")}
-      <section class="blk cal-legend"><p class="legend">V victoire · D défaite · Prol. en prolongation · T.B. en tirs de barrage. Pointage du CH en premier. Heures de l’Est. Saison régulière et séries comptées dans « joués » et « à venir » (matchs préparatoires exclus).</p></section>`;
+      <section class="blk cal-legend"><p class="legend">V victoire · D défaite · Prol. en prolongation · TB en tirs de barrage. Pointage du CH en premier. Heures de l’Est. Saison régulière et séries comptées dans « joués » et « à venir » (matchs préparatoires exclus).</p></section>`;
   }
   function seasonText(d) {
     const s = String(d.schedule?.currentSeason || "");
