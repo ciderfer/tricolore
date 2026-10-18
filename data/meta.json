@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-10-18T15:47:37.115Z",
-  "checkedAt": "2026-10-18T15:47:37.115Z",
+  "updatedAt": "2026-10-18T15:54:07.450Z",
+  "checkedAt": "2026-10-18T15:54:07.450Z",
   "sources": {
     "schedule": {
       "ok": true,
@@ -13,6 +13,14 @@
     "standings": {
       "ok": true,
       "url": "https://api-web.nhle.com/v1/standings/2026-10-17"
+    },
+    "roster": {
+      "ok": true,
+      "url": "https://api-web.nhle.com/v1/roster/MTL/20262027"
+    },
+    "stats": {
+      "ok": true,
+      "url": "https://api-web.nhle.com/v1/club-stats/MTL/20262027/2"
     }
   },
   "news": {
