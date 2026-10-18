@@ -1,1 +1,3 @@
 shots-pr/
+worker/.wrangler/
+node_modules/

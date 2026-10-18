@@ -20,6 +20,15 @@
   const hourOf = (d) => fH.format(d).replace(/\D/g, "");
   const minOf = (d) => fM.format(d).padStart(2, "0");
 
+  // Proxy Cloudflare (worker/) pour le pointage en direct. En local, ?worker=http://localhost:8787 permet de tester.
+  const WORKER_DEFAULT = "https://tricolore.tricolore.workers.dev";
+  const WORKER = (() => {
+    const q = new URLSearchParams(location.search).get("worker");
+    return q && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(q) ? q : WORKER_DEFAULT;
+  })();
+  const POLL_MS = 15_000;
+  const STALE_MS = 90 * 60 * 1000; // la vérification des données a lieu au moins aux 45 min
+
   const SOURCE_LABEL = { schedule: "Calendrier", scoreboard: "Match en cours", standings: "Classement" };
   const errBox = (what, detail) =>
     `<div class="err">${esc(what)} : source LNH indisponible${detail ? ` (${esc(detail)})` : ""}. Aucune donnée affichée plutôt qu’une donnée inexacte.</div>`;
@@ -49,40 +58,58 @@
     .sort((a, b) => (/RDS|TVA/.test(b) ? 1 : 0) - (/RDS|TVA/.test(a) ? 1 : 0));
   const chips = (tv) => tv.length ? tv.map((t) => `<span class="chip">${esc(t)}</span>`).join("") : `<span>Télé non annoncée</span>`;
 
-  const top = `<div class="top"><div class="wordmark">Tri<i></i>co<i></i>lore</div><div class="lbl" id="season"></div></div>`;
+  let seasonText = "";
+  const top = () => `<div class="top"><div class="wordmark">Tri<i></i>co<i></i>lore</div><div class="lbl">${esc(seasonText)}</div></div>`;
 
   function hero(d, byAbbr) {
     const sbGames = (d.scoreboard?.gamesByDate || []).flatMap((x) => x.games);
     const live = sbGames.find((g) => LIVE.has(g.gameState));
-    if (live) {
-      const p = live.periodDescriptor;
-      const period = p ? (p.periodType === "OT" ? "Prolongation" : p.periodType === "SO" ? "Tirs de barrage" : `${Number(p.number) || ""}<span class="lc">e</span> période`) : "En cours";
-      const clock = live.clock?.inIntermission ? "Entracte" : live.clock?.timeRemaining ? `${live.clock.timeRemaining} à jouer` : "";
-      const row = (t, side) => `<div class="board-row ${t.abbrev === MTL ? "mtl" : ""}">
-        <div class="name cond">${esc(loc(t.commonName))}<small>${side}</small></div>
-        <div class="sc num">${Number.isFinite(t.score) ? t.score : "–"}</div></div>`;
-      const asOf = d.meta?.updatedAt ? fClock.format(new Date(d.meta.updatedAt)) : null;
-      return `<section class="hero">${top}
-        <div class="lbl kick live-kick">En direct · ${period}</div>
-        <div class="board">${row(live.awayTeam, "Visiteurs")}${row(live.homeTeam, "Locaux")}</div>
-        <div class="state">${esc(clock)}${asOf ? `<small>Pointage en date de ${esc(asOf)} (heure de l’Est), rafraîchi environ aux 10 minutes.</small>` : ""}</div>
-        <div class="meta"><span class="chip w">${esc(loc(live.venue))}</span>${chips(tvOf(live))}</div></section>`;
-    }
-    if (!d.schedule) return `<section class="hero">${top}<div style="margin:30px 18px 0">${errBox("Calendrier", d.errors.schedule)}</div></section>`;
+    if (live) return liveHero(live, d.meta?.updatedAt ? new Date(d.meta.updatedAt) : null, "static");
+    if (!d.schedule) return `<section class="hero">${top()}<div style="margin:30px 18px 0">${errBox("Calendrier", d.errors.schedule)}</div></section>`;
     const g = d.schedule.games
       .filter((x) => !DONE.has(x.gameState) && new Date(x.startTimeUTC).getTime() > Date.now() - 4 * 3600e3)
       .sort((a, b) => a.startTimeUTC.localeCompare(b.startTimeUTC))[0];
-    if (!g) return `<section class="hero">${top}<div class="lbl kick">Prochain match</div><p class="state">Aucun match à venir au calendrier.</p></section>`;
+    if (!g) return `<section class="hero">${top()}<div class="lbl kick">Prochain match</div><p class="state">Aucun match à venir au calendrier.</p></section>`;
     const home = g.homeTeam.abbrev === MTL;
     const opp = team(home ? g.awayTeam : g.homeTeam, byAbbr);
     const dt = new Date(g.startTimeUTC);
     const tbd = g.gameScheduleState && g.gameScheduleState !== "OK";
-    return `<section class="hero">${top}
+    return `<section class="hero">${top()}
       <div class="lbl kick">Prochain match · ${home ? "Domicile" : "Étranger"}${g.gameType === 1 ? " · Préparatoire" : ""}</div>
-      <div class="datebig"><span class="day num">${esc(fDay.format(dt))}</span>
-        <div class="side"><div class="wd cond">${esc(cap(fWeekday.format(dt)))}</div><div class="mo cond">${esc(fMonth.format(dt))}</div></div></div>
+      ${(() => {
+        const wd = cap(fWeekday.format(dt)), mo = fMonth.format(dt);
+        const len = Math.max(wd.length, mo.length); // « mercredi », « septembre » : on réduit pour ne pas déborder
+        const size = len >= 9 ? "xl" : len >= 8 ? "l" : "";
+        return `<div class="datebig ${size}"><span class="day num">${esc(fDay.format(dt))}</span>
+        <div class="side"><div class="wd cond">${esc(wd)}</div><div class="mo cond">${esc(mo)}</div></div></div>`;
+      })()}
       <div class="opp"><div><span class="vs">${home ? "Contre les" : "Chez les"}</span><span class="name cond">${esc(opp.name)}</span><span class="place">de ${esc(opp.place)}</span></div></div>
       <div class="time"><span class="num">${tbd ? "À CONFIRMER" : `${hourOf(dt)}<span class="hh">h</span>${minOf(dt)}`}</span><small>Heure<br>de l’Est</small></div>
+      <div class="meta"><span class="chip w">${esc(loc(g.venue))}</span>${chips(tvOf(g))}</div></section>`;
+  }
+
+  // Carte du match en cours ou terminé. source : "worker" (direct) ou "static" (fichiers du site).
+  function liveHero(g, asOf, source, note) {
+    const final = DONE.has(g.gameState);
+    const p = g.periodDescriptor;
+    const period = !p ? "En cours"
+      : p.periodType === "OT" ? "Prolongation" : p.periodType === "SO" ? "Tirs de barrage"
+      : `${Number(p.number) || ""}<span class="lc">e</span> période`;
+    const clock = final ? "" : g.clock?.inIntermission ? "Entracte" : g.clock?.timeRemaining ? `${esc(g.clock.timeRemaining)} à jouer` : "";
+    const row = (t, side) => `<div class="board-row ${t.abbrev === MTL ? "mtl" : ""}">
+      <div class="name cond">${esc(loc(t.commonName))}<small>${side}</small></div>
+      <div class="sc num">${Number.isFinite(t.score) ? t.score : "–"}</div></div>`;
+    const when = asOf ? fClock.format(asOf) : null;
+    const how = source === "worker" && final
+      ? `Pointage final reçu à ${esc(when || "heure inconnue")} (heure de l’Est).`
+      : source === "worker"
+      ? `Pointage en direct${when ? ` en date de ${esc(when)}` : ""} (heure de l’Est), mis à jour aux 15 secondes.`
+      : `Pointage en date de ${esc(when || "heure inconnue")} (heure de l’Est), fichiers du site rafraîchis environ aux 15 minutes.`;
+    const extra = p?.periodType === "OT" ? " · Prolongation" : p?.periodType === "SO" ? " · Tirs de barrage" : "";
+    return `<section class="hero">${top()}
+      <div class="lbl kick ${final ? "" : "live-kick"}">${final ? `Match terminé${extra}` : `En direct · ${period}`}</div>
+      <div class="board">${row(g.awayTeam, "Visiteurs")}${row(g.homeTeam, "Locaux")}</div>
+      <div class="state">${final ? "Final" : clock}<small>${how}</small>${note ? `<small class="warn-note">${esc(note)}</small>` : ""}</div>
       <div class="meta"><span class="chip w">${esc(loc(g.venue))}</span>${chips(tvOf(g))}</div></section>`;
   }
 
@@ -99,7 +126,7 @@
     const h = `<h2 class="h cond">Derniers<br>résultats</h2>`;
     if (!d.schedule) return `<section class="blk">${h}${errBox("Résultats", d.errors.schedule)}</section>`;
     const games = d.schedule.games
-      .filter((g) => DONE.has(g.gameState) && (g.gameType === 2 || g.gameType === 3))
+      .filter((g) => DONE.has(g.gameState) && (g.gameType === 2 || g.gameType === 3) && Number.isFinite(g.homeTeam.score) && Number.isFinite(g.awayTeam.score))
       .sort((a, b) => b.startTimeUTC.localeCompare(a.startTimeUTC)).slice(0, 5);
     if (!games.length) return `<section class="blk">${h}<p class="legend">Aucun match joué cette saison.</p></section>`;
     return `<section class="blk">${h}${games.map((g) => {
@@ -133,7 +160,8 @@
   function footer(d) {
     const failed = Object.keys(SOURCE_LABEL).filter((n) => d.errors[n]).map((n) => SOURCE_LABEL[n]);
     const when = d.meta?.updatedAt ? fStamp.format(new Date(d.meta.updatedAt)) : null;
-    return `<p>Données : API publique de la LNH${when ? ` · dernière mise à jour le ${esc(when)} (heure de l’Est)` : ""}.</p>
+    const checked = d.meta?.checkedAt ? fStamp.format(new Date(d.meta.checkedAt)) : null;
+    return `<p>Données : API publique de la LNH${when ? ` · dernière modification le ${esc(when)}` : ""}${checked ? `, vérifiées le ${esc(checked)}` : ""}${when || checked ? " (heure de l’Est)" : ""}.</p>
       ${d.errors.meta ? `<p class="foot-warn">Heure de mise à jour inconnue (meta.json : ${esc(d.errors.meta)}).</p>` : ""}
       ${failed.length ? `<p class="foot-warn">Source en échec : ${esc(failed.join(", "))}.</p>` : ""}
       <p>Site de partisan non officiel, non affilié à la LNH ni au Club de hockey Canadien.</p>`;
@@ -143,16 +171,75 @@
     const all = d.standings?.standings || [];
     const byAbbr = Object.fromEntries(all.map((t) => [t.teamAbbrev.default, t]));
     const me = byAbbr[MTL];
+    const season = String(d.schedule?.currentSeason || me?.seasonId || "");
+    if (/^\d{8}$/.test(season)) seasonText = `Saison ${season.slice(0, 4)}-${season.slice(4)}`;
     const parts = [
-      () => hero(d, byAbbr), () => band(d, me), () => results(d), () => sleeve,
+      () => `<div id="hero-slot">${hero(d, byAbbr)}</div>`, () => staleBanner(d), () => band(d, me), () => results(d), () => sleeve,
       () => standings(d, me, all), () => sleeve, () => news,
     ];
     document.getElementById("app").innerHTML = parts.map((fn) => {
       try { return fn(); } catch (e) { console.error(e); return `<div class="blk">${errBox("Section", "erreur d’affichage")}</div>`; }
     }).join("");
-    const season = String(d.schedule?.currentSeason || me?.seasonId || "");
-    const seasonEl = document.getElementById("season");
-    if (seasonEl && /^\d{8}$/.test(season)) seasonEl.textContent = `Saison ${season.slice(0, 4)}-${season.slice(4)}`;
     document.getElementById("foot").innerHTML = footer(d);
+    startLive(d);
   });
+
+  function staleBanner(d) {
+    const t = Date.parse(d.meta?.checkedAt || d.meta?.updatedAt || "");
+    if (!t || Date.now() - t < STALE_MS) return "";
+    return `<div class="stale" role="status">Attention : les données du site n’ont pas été vérifiées depuis le ${esc(fStamp.format(new Date(t)))} (heure de l’Est). Elles peuvent être périmées.</div>`;
+  }
+
+  // ---- Pointage en direct via le Worker ----
+  // Match à suivre : en cours selon les fichiers, ou qui commence dans moins de 30 min,
+  // ou commencé depuis moins de 6 h et pas encore terminé selon les fichiers.
+  function liveCandidate(d) {
+    const sbLive = (d.scoreboard?.gamesByDate || []).flatMap((x) => x.games).find((g) => LIVE.has(g.gameState));
+    if (sbLive) return sbLive;
+    const now = Date.now();
+    return (d.schedule?.games || []).find((g) => {
+      if (DONE.has(g.gameState)) return false;
+      const start = Date.parse(g.startTimeUTC);
+      return start - now <= 30 * 60e3 && now - start <= 6 * 3600e3;
+    }) || null;
+  }
+
+  function startLive(d) {
+    let timer = null, stopped = false, failures = 0, lastGood = null;
+    const slot = () => document.getElementById("hero-slot");
+
+    async function tick() {
+      timer = null;
+      if (stopped || document.hidden) return;
+      const g = liveCandidate(d);
+      if (!g) { timer = setTimeout(tick, 60_000); return; } // rien à suivre : on revérifie chaque minute, sans réseau
+      try {
+        const r = await fetch(`${WORKER}/v1/gamecenter/${encodeURIComponent(g.id)}/landing`, { cache: "no-store" });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const live = await r.json();
+        const asOf = new Date(Date.parse(r.headers.get("x-tricolore-fetched-at") || "") || Date.now());
+        failures = 0; lastGood = { live, asOf };
+        if (LIVE.has(live.gameState) || DONE.has(live.gameState)) slot().innerHTML = liveHero(live, asOf, "worker");
+        if (DONE.has(live.gameState)) { stopped = true; return; }
+      } catch (e) {
+        failures += 1;
+        console.warn("Pointage en direct indisponible :", e.message);
+        const metaTime = d.meta?.updatedAt ? fStamp.format(new Date(d.meta.updatedAt)) : "heure inconnue";
+        const note = `Pointage en direct indisponible. Affichage des données du site en date du ${metaTime} (heure de l’Est).`;
+        if (lastGood && LIVE.has(lastGood.live.gameState)) slot().innerHTML = liveHero(lastGood.live, lastGood.asOf, "worker", note);
+        else {
+          slot().innerHTML = hero(d, Object.fromEntries((d.standings?.standings || []).map((t) => [t.teamAbbrev.default, t])));
+          const st = slot().querySelector(".hero");
+          if (st) st.insertAdjacentHTML("beforeend", `<p class="warn-note hero-note">${esc(note)}</p>`);
+        }
+      }
+      timer = setTimeout(tick, failures ? Math.min(POLL_MS * 2 ** failures, 120_000) : POLL_MS);
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) { clearTimeout(timer); timer = null; }
+      else if (!timer && !stopped) tick();
+    });
+    tick();
+  }
 })();
