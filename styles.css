@@ -283,9 +283,10 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
 /* ---------- Grand écran : mêmes pages, le téléphone ne change pas ---------- */
 /* Accueil, match, joueur : une colonne centrée, comme un site web. Calendrier et alignement : en colonnes. */
 @media (min-width:1024px){
-  :root{--maxw:760px;--gut:max(0px,calc((100vw - var(--maxw)) / 2))}
+  :root{--maxw:900px;--gut:max(0px,calc((100vw - var(--maxw)) / 2))}
   :root:has(main>.cal-month,main>.blk>.roster:not(.l5)){--maxw:1440px}
-  body{background:var(--blue)}
+  body{background:var(--cream)}
+  /* Navigation et pied de page : bandes bleues pleine largeur, contenu aligné sur la colonne */
   .tabs{padding-left:calc(var(--gut) + 10px);padding-right:calc(var(--gut) + 10px)}
   footer{padding-left:calc(var(--gut) + 18px);padding-right:calc(var(--gut) + 18px)}
   main{max-width:var(--maxw);margin:0 auto;background:var(--red)}
