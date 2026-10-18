@@ -280,3 +280,31 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
 .news-meta b{color:var(--white);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:12px;background:var(--red);padding:2px 6px;margin-right:2px}
 .news-fail{margin:14px 0 0;padding:8px 10px;font-size:14px;font-weight:700;color:var(--white);background:var(--red);font-stretch:100%;letter-spacing:0}
 .news-note{margin:14px 0 0;font-size:13px;color:#aeb3e0;font-stretch:100%;letter-spacing:0}
+/* ---------- Grand écran : mêmes pages, le téléphone ne change pas ---------- */
+/* Accueil, match, joueur : une colonne centrée, comme un site web. Calendrier et alignement : en colonnes. */
+@media (min-width:1024px){
+  :root{--maxw:760px;--gut:max(0px,calc((100vw - var(--maxw)) / 2))}
+  :root:has(main>.cal-month,main>.blk>.roster:not(.l5)){--maxw:1440px}
+  body{background:var(--blue)}
+  .tabs{padding-left:calc(var(--gut) + 10px);padding-right:calc(var(--gut) + 10px)}
+  footer{padding-left:calc(var(--gut) + 18px);padding-right:calc(var(--gut) + 18px)}
+  main{max-width:var(--maxw);margin:0 auto;background:var(--red)}
+  /* Calendrier : mois côte à côte */
+  main:has(>.cal-month){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:18px}
+  main:has(>.cal-month)>:not(.cal-month){grid-column:1/-1}
+  main:has(>.cal-month)>.hero{grid-column:1}
+  main:has(>.cal-month)>.ics{grid-column:-2/-1;grid-row:1;align-self:end}
+  /* Alignement : attaquants (2 colonnes) | défenseurs | gardiens, puis patineurs | gardiens */
+  main:has(>.blk>.roster:not(.l5)){display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}
+  main:has(>.blk>.roster:not(.l5))>:not(.white){grid-column:1/-1}
+  .blk:has(>.roster:not(.l5)){display:grid;grid-template-columns:2fr 1fr 1fr;column-gap:18px;align-content:start}
+  .blk:has(>.roster:not(.l5))>.h{grid-column:1/-1}
+  .blk:has(>.roster:not(.l5))>.grp{grid-row:2;margin:0;padding-left:8px;padding-right:8px}
+  .blk:has(>.roster:not(.l5))>.roster{grid-row:3;align-self:start}
+  .blk:has(>.roster:not(.l5))>.roster:first-of-type{columns:2;column-gap:18px}
+  .blk:has(>.roster:not(.l5)) .pl{margin-left:0;margin-right:0;padding-left:8px;padding-right:8px;break-inside:avoid}
+}
+@media (min-width:1240px){
+  main:has(>.cal-month){grid-template-columns:repeat(3,minmax(0,1fr))}
+  main:has(>.cal-month)>.hero{grid-column:1/span 2}
+}
