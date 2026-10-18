@@ -111,7 +111,7 @@
       <div class="lbl kick ${final ? "" : "live-kick"}">${final ? `Match terminé${extra}` : `En direct · ${period}`}</div>
       <div class="board">${row(g.awayTeam, "Visiteurs")}${row(g.homeTeam, "Locaux")}</div>
       <div class="state">${final ? "Final" : clock}<small>${how}</small>${note ? `<small class="warn-note">${esc(note)}</small>` : ""}</div>
-      <div class="meta"><span class="chip w">${esc(loc(g.venue))}</span>${chips(tvOf(g))}</div></section>`;
+      <div class="meta"><span class="chip w">${esc(loc(g.venue))}</span>${chips(tvOf(g))}</div>${/^\d{10}$/.test(String(g.id)) ? `<a class="more hero-more" href="match.html?id=${encodeURIComponent(g.id)}">Feuille de match ›</a>` : ""}</section>`;
   }
 
   function band(d, me) {
@@ -137,9 +137,9 @@
       const extra = x === "OT" ? "Prol." : x === "SO" ? "T.B." : "";
       const dt = new Date(g.startTimeUTC);
       const label = code === "V" ? "Victoire" : code === "DP" ? "Défaite en prolongation ou tirs de barrage" : "Défaite";
-      return `<div class="res"><div class="code ${code}" title="${label}" aria-label="${label}">${code}</div>
+      return `<a class="res res-a" href="match.html?id=${encodeURIComponent(g.id)}" aria-label="${label} ${us.score} à ${them.score} : feuille de match"><div class="code ${code}" title="${label}">${code}</div>
         <div class="o cond">${esc(loc(them.commonName))}<small>${esc(fShortWd.format(dt))} ${esc(fShort.format(dt))} · ${home ? "Domicile" : "Étranger"}</small></div>
-        <div class="s num">${us.score}-${them.score}${extra ? `<small>${extra}</small>` : ""}</div></div>`;
+        <div class="s num">${us.score}-${them.score}${extra ? `<small>${extra}</small>` : ""}</div></a>`;
     }).join("")}<p class="legend">V victoire · D défaite · DP défaite en prolongation ou tirs de barrage. Pointage du CH en premier.</p></section>`;
   }
 

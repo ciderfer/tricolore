@@ -59,12 +59,12 @@
         extraCls = " done";
       } else right = `<div class="cg-res"><span class="cg-na">Résultat non disponible</span></div>`;
     } else if (LIVE.has(g.gameState)) {
-      right = `<div class="cg-res"><a class="cg-live" href="./">En cours ›</a></div>`;
+      right = `<div class="cg-res"><span class="cg-live">En cours ›</span></div>`;
     } else {
       const tv = tvOf(g);
       right = `<div class="cg-up"><span class="num cg-time">${special ? `<span class="cg-special">${esc(special)}</span>` : clock(dt)}</span>${tv.length ? `<span class="cg-tv">${tv.map(esc).join(" · ")}</span>` : `<span class="cg-tv none">Télé non annoncée</span>`}</div>`;
     }
-    return `<li class="cg${extraCls}${next ? " next" : ""}"${next ? ' id="prochain"' : ""} data-id="${esc(g.id)}">${next ? `<span class="cg-flag lbl">Prochain match</span>` : ""}${date}${opp}${right}</li>`;
+    return `<li class="cg${extraCls}${next ? " next" : ""}"${next ? ' id="prochain"' : ""} data-id="${esc(g.id)}">${next ? `<span class="cg-flag lbl">Prochain match</span>` : ""}${date}${opp}${right}${DONE.has(g.gameState) || LIVE.has(g.gameState) ? `<a class="cg-link" href="match.html?id=${encodeURIComponent(g.id)}" aria-label="Feuille de match : ${esc(loc(them.commonName))}, ${esc(fDay.format(dt))} ${esc(fMonthName.format(dt))}"></a>` : ""}</li>`;
   }
 
   function body(d) {

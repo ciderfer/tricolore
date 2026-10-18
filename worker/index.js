@@ -1,17 +1,22 @@
 // Tricolore — mini proxy CORS vers l'API publique de la LNH (api-web.nhle.com).
 // Seulement des requêtes GET, seulement les chemins du Canadien listés ci-dessous,
 // seulement pour le site (et localhost en développement). Aucun secret.
+// Feuilles de match (gamecenter) : seulement les matchs où joue le Canadien, vérifié avec
+// la page « landing » du match. Cache : 5 s en direct, plus long pour un match terminé.
 
 const UPSTREAM = "https://api-web.nhle.com";
 
-// [motif du chemin, durée de cache en secondes]
+// [motif du chemin, durée de cache en secondes, ou "game" = selon l'état du match]
 const ROUTES = [
   [/^\/v1\/scoreboard\/MTL\/now$/, 5],
   [/^\/v1\/score\/now$/, 5],
-  [/^\/v1\/gamecenter\/\d{10}\/(landing|boxscore)$/, 5],
+  [/^\/v1\/gamecenter\/\d{10}\/(landing|boxscore|right-rail)$/, "game"],
   [/^\/v1\/club-schedule-season\/MTL\/now$/, 60],
   [/^\/v1\/standings\/now$/, 60],
 ];
+
+// Cache d'une feuille de match selon l'état : en direct 5 s, terminé (OFF, officiel) 1 h.
+const GAME_TTL = { LIVE: 5, CRIT: 5, PRE: 30, FUT: 300, FINAL: 120, OFF: 3600 };
 
 const ALLOWED_ORIGIN = /^(https:\/\/ciderfer\.github\.io|http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?)$/;
 
@@ -24,6 +29,31 @@ function reply(status, body, origin, extra = {}) {
   return new Response(typeof body === "string" ? body : JSON.stringify(body), { status, headers });
 }
 
+// Lit un chemin de l'API, ou le cache. ttl : nombre fixe, ou "game" (selon l'état du match).
+async function getUpstream(path, ttl, now, fallbackTtl = 5) {
+  const hit = memo.get(path);
+  if (hit && now - hit.at < hit.ttl * 1000) return { ...hit, cache: "HIT" };
+  let up;
+  try {
+    up = await fetch(UPSTREAM + path, {
+      redirect: "follow",
+      headers: { "user-agent": "tricolore (site de partisan; github.com/ciderfer/tricolore)" },
+    });
+  } catch { return { error: "LNH injoignable" }; }
+  if (!up.ok) return { error: `LNH : HTTP ${up.status}` };
+  const body = await up.text();
+  const entry = { at: now, body, ttl: typeof ttl === "number" ? ttl : 5 };
+  if (ttl === "game") {
+    let j;
+    try { j = JSON.parse(body); } catch { return { error: "réponse LNH illisible" }; }
+    entry.ttl = GAME_TTL[j.gameState] ?? fallbackTtl; // right-rail n'a pas d'état : celui de « landing »
+    if (j.awayTeam && j.homeTeam) entry.mtl = j.awayTeam.abbrev === "MTL" || j.homeTeam.abbrev === "MTL";
+  }
+  memo.set(path, entry);
+  if (memo.size > 60) memo.delete(memo.keys().next().value);
+  return { ...entry, cache: "MISS" };
+}
+
 export default {
   async fetch(request) {
     const origin = request.headers.get("Origin") || "";
@@ -34,31 +64,24 @@ export default {
     const { pathname } = new URL(request.url);
     const route = ROUTES.find(([re]) => re.test(pathname));
     if (!route) return reply(404, { error: "chemin non permis" }, okOrigin);
-    const ttl = route[1];
-
     const now = Date.now();
-    const hit = memo.get(pathname);
-    if (hit && now - hit.at < ttl * 1000) {
-      return reply(200, hit.body, okOrigin, {
-        "cache-control": `public, max-age=${ttl}`, "x-tricolore-cache": "HIT",
-        "x-tricolore-fetched-at": new Date(hit.at).toISOString(),
-      });
+    const fail = (error) => reply(502, { error }, okOrigin, { "cache-control": "no-store" });
+    const notMtl = () => reply(404, { error: "match du Canadien seulement" }, okOrigin);
+
+    let landingTtl = 5;
+    if (route[1] === "game") {
+      // Le match doit opposer le Canadien : on vérifie avec « landing » (mise en cache aussi).
+      const id = pathname.split("/")[3];
+      const landing = await getUpstream(`/v1/gamecenter/${id}/landing`, "game", now);
+      if (landing.error) return fail(landing.error);
+      if (!landing.mtl) return notMtl();
+      landingTtl = landing.ttl;
     }
-    try {
-      const up = await fetch(UPSTREAM + pathname, {
-        redirect: "follow",
-        headers: { "user-agent": "tricolore (site de partisan; github.com/ciderfer/tricolore)" },
-      });
-      if (!up.ok) return reply(502, { error: `LNH : HTTP ${up.status}` }, okOrigin, { "cache-control": "no-store" });
-      const body = await up.text();
-      memo.set(pathname, { at: now, body });
-      if (memo.size > 50) memo.delete(memo.keys().next().value);
-      return reply(200, body, okOrigin, {
-        "cache-control": `public, max-age=${ttl}`, "x-tricolore-cache": "MISS",
-        "x-tricolore-fetched-at": new Date(now).toISOString(),
-      });
-    } catch (err) {
-      return reply(502, { error: "LNH injoignable" }, okOrigin, { "cache-control": "no-store" });
-    }
+    const res = await getUpstream(pathname, route[1], now, landingTtl);
+    if (res.error) return fail(res.error);
+    return reply(200, res.body, okOrigin, {
+      "cache-control": `public, max-age=${res.ttl}`, "x-tricolore-cache": res.cache,
+      "x-tricolore-fetched-at": new Date(res.at).toISOString(),
+    });
   },
 };

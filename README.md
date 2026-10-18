@@ -33,6 +33,15 @@ python3 -m http.server 8000
 # puis ouvrir http://localhost:8000
 ```
 
+## Feuille de match
+
+Page `match.html?id=<identifiant LNH du match>` (script `match.js`). On y arrive depuis l’accueil (derniers résultats, carte du match en direct ou terminé) et depuis le calendrier (matchs joués ou en cours).
+
+- Données : `gamecenter/<id>/landing` (pointage, période, buts, trois étoiles, pénalités), `boxscore` (gardiens, issue du match) et `right-rail` (tirs par période, statistiques d’équipe), lues par le Worker.
+- En direct : mise à jour aux 15 secondes quand l’onglet est visible.
+- Si le Worker ne répond pas : le pointage du calendrier du site s’affiche, avec un message clair. Les buts, tirs et autres détails ne s’affichent pas.
+- Aucune photo.
+
 ## Calendrier
 
 Page `calendrier.html` (script `calendrier.js`), onglet « Calendrier ». Elle lit `data/schedule.json`, déjà récupéré par la tâche planifiée.
@@ -62,7 +71,7 @@ Page `alignement.html` (script `alignement.js`), accessible par l’onglet « Al
 ## Worker Cloudflare (pointage en direct)
 
 - Adresse : `https://tricolore.tricolore.workers.dev` (constante `WORKER_DEFAULT` dans `app.js`).
-- Requêtes GET seulement, depuis `https://ciderfer.github.io` ou `localhost`. Chemins permis : `scoreboard/MTL/now`, `score/now`, `gamecenter/<id>/landing|boxscore` (cache 5 s), `club-schedule-season/MTL/now`, `standings/now` (cache 60 s). Aucun secret.
+- Requêtes GET seulement, depuis `https://ciderfer.github.io` ou `localhost`. Chemins permis : `scoreboard/MTL/now`, `score/now` (cache 5 s), `gamecenter/<id>/landing|boxscore|right-rail` (matchs du Canadien seulement, vérifié avec `landing` ; cache 5 s en direct, 2 min si final non officiel, 1 h si officiel), `club-schedule-season/MTL/now`, `standings/now` (cache 60 s). Aucun secret.
 - Déploiement manuel, depuis le dossier `worker/` (Node 22+, compte Cloudflare connecté) :
 
 ```sh
