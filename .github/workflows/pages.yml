@@ -34,6 +34,8 @@ jobs:
           cp -r *.html *.js *.css fonts data _site/
 
       - uses: actions/configure-pages@v6
+      - name: Icônes et manifeste (écran d’accueil)
+        run: cp -r manifest.webmanifest icons _site/
       - uses: actions/upload-pages-artifact@v5
         with:
           path: _site

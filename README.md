@@ -52,6 +52,13 @@ Page `alignement.html` (script `alignement.js`), accessible par l’onglet « Al
 - L’âge est calculé à la date du jour (heure de l’Est). Les meneurs (points, buts, passes) sont calculés à partir de `stats.json`. Les égalités sont toutes nommées (deux noms au plus, puis « +N »).
 - Si une source est en échec, la section concernée affiche un message d’erreur et le pied de page la nomme.
 
+## Icône et écran d’accueil
+
+- Icône originale (pas le logo de la LNH ni du CH) : rouge du chandail, bande bleu-blanc, « T » blanc et les deux points du mot-symbole. Sources SVG dans `icons/`, générées par `scripts/icones.py`.
+- `manifest.webmanifest` : nom « Tricolore », `display: standalone`, `start_url` et `scope` `/tricolore/`.
+- Sur iPhone : Safari → Partager → « Sur l’écran d’accueil ». Barre d’état translucide au-dessus de la bande bleue.
+- Aucun service worker : la page lit toujours les données fraîches.
+
 ## Worker Cloudflare (pointage en direct)
 
 - Adresse : `https://tricolore.tricolore.workers.dev` (constante `WORKER_DEFAULT` dans `app.js`).
