@@ -73,7 +73,7 @@
     const body = reg.length ? reg.map((s) => team(s, reg.length > 1) + grid(cells(s))).join("") : `<p class="pj-none">Aucun match dans la LNH cette saison.</p>`;
     const playoffs = po.length ? `<p class="pj-team lbl">Séries</p>${po.map((s) => grid(cells(s))).join("")}` : "";
     return `<section class="band"><div class="leaders-wrap"><div class="lbl band-lbl">${esc(seasonLabel(p.season))} · saison régulière</div>${body}${playoffs}
-      <p class="pj-legend">${g ? "V victoires · D défaites · DP défaites en prolongation ou tirs de barrage · %ARR taux d’arrêts · MOY moyenne de buts accordés · BL blanchissages"
+      <p class="pj-legend">${g ? "V victoires · D défaites · DP défaites en prolongation ou tirs de barrage · %ARR pourcentage d’arrêts · MOY moyenne de buts alloués · BL blanchissages"
         : "PJ parties jouées · B buts · A passes · PTS points · PUN minutes de pénalité · TG moy. temps de glace moyen"}</p></div></section>`;
   }
 

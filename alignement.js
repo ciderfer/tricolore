@@ -121,7 +121,7 @@
     return `<section class="blk white">${h}<table class="stats gl">
       <thead><tr><th>Gardien</th><th>PJ</th><th>V</th><th>D</th><th>DP</th><th>%ARR</th><th>MOY</th></tr></thead><tbody>
       ${list.map((p) => `<tr><td>${nameCell(d, p)}</td><td>${n(p.gamesPlayed)}</td><td>${n(p.wins)}</td><td>${n(p.losses)}</td><td>${n(p.overtimeLosses)}</td><td class="pts">${fin(p.savePercentage) ? fPct.format(p.savePercentage).replace(/^0(?=,)/, "") : "—"}</td><td>${fin(p.goalsAgainstAverage) ? fGaa.format(p.goalsAgainstAverage) : "—"}</td></tr>`).join("")}
-      </tbody></table><p class="asof">V victoires · D défaites · DP défaites en prolongation ou tirs de barrage · %ARR taux d’arrêts · MOY moyenne de buts accordés.</p></section>`;
+      </tbody></table><p class="asof">V victoires · D défaites · DP défaites en prolongation ou tirs de barrage · %ARR pourcentage d’arrêts · MOY moyenne de buts alloués.</p></section>`;
   }
 
   function footer(d) {
