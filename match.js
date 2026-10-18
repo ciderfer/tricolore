@@ -173,7 +173,8 @@
     if (!any) return DONE.has(L.gameState) || LIVE.has(L.gameState) ? `<section class="blk">${h}<p class="none">Aucune pénalité.</p></section>` : "";
     return `<section class="blk pen-blk">${h}${ps.filter((p) => p.penalties?.length).map((p) => `<h3 class="grp lbl">${periodName(p.periodDescriptor)}</h3><ul class="pens">
       ${p.penalties.map((x) => {
-        const who = x.committedByPlayer ? initial(x.committedByPlayer) : x.servedBy ? `Équipe (purgée par ${esc(typeof x.servedBy === "string" ? x.servedBy : initial(x.servedBy))})` : "Équipe";
+        const server = typeof x.servedBy === "string" ? x.servedBy : loc(x.servedBy) || (x.servedBy?.lastName ? initial(x.servedBy) : "");
+        const who = x.committedByPlayer ? initial(x.committedByPlayer) : server.trim() ? `Punition d’équipe (purgée par ${server.trim()})` : "Punition d’équipe";
         return `<li><span class="num">${esc(x.timeInPeriod || "")}</span> <b>${esc(loc(x.teamAbbrev) || "")}</b> ${esc(who)} · ${fin(x.duration) ? `${x.duration} min` : ""} · ${esc(penName(x.descKey))}</li>`;
       }).join("")}</ul>`).join("")}</section>`;
   }
