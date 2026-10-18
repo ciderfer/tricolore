@@ -309,6 +309,11 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
   .rec{display:flex;align-items:center;justify-content:space-between;gap:28px}
   .rec .rank{display:flex;gap:28px;font-size:22px;font-weight:800;font-stretch:87.5%;color:var(--white)}
   .rec .rank br{display:none}
+  /* V2 : une seule rangée 2-up, derniers résultats | division Atlantique */
+  main:has(>#hero-slot){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-auto-flow:row dense}
+  main:has(>#hero-slot)>*{grid-column:1/-1}
+  main:has(>#hero-slot)>.band+.blk{grid-column:1}
+  main:has(>#hero-slot)>.band+.blk+.sleeve+.white{grid-column:2}
   /* Calendrier : mois côte à côte */
   main:has(>.cal-month){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:18px}
   main:has(>.cal-month)>:not(.cal-month){grid-column:1/-1}
