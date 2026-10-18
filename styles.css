@@ -142,6 +142,27 @@ tr.mtl td:first-child,tr.mtl td.pts{color:var(--white)}
 tr.mtl td:first-child{box-shadow:-18px 0 0 var(--red)}
 tr.mtl td:last-child{box-shadow:18px 0 0 var(--red)}
 .asof{font-size:14px;font-weight:600;color:#6a6e8c;margin:10px 0 0}
+/* Course aux séries */
+.series{padding-top:6px}
+.sr-status{border-top:4px solid var(--blue);padding:12px 0 10px}
+.sr-status .cond{display:block;font-size:40px;line-height:.92;color:var(--blue)}
+.sr-status.out .cond{color:var(--red)}
+.sr-status small{display:block;font-size:14px;font-weight:700;color:#6a6e8c;margin-top:4px}
+.sr-status sup,.sr-line sup{font-size:.55em}
+.sr-line{border-top:2px solid #e3e0d6;padding:10px 0}
+.sr-lbl{font-size:11px;letter-spacing:.14em;color:#6a6e8c}
+.sr-main{font-size:17px;font-weight:600;margin-top:4px;line-height:1.3}
+.sr-main b{font-weight:900;color:var(--blue)}
+.sr-gp{font-size:13.5px;font-weight:600;color:#6a6e8c;margin-top:2px}
+.sr-h{margin:16px 0 8px;color:#6a6e8c}
+table.wc td:first-child{font-family:Archivo;font-size:13px;font-weight:800;color:#6a6e8c;white-space:nowrap}
+table.wc td:first-child sup{font-size:.7em}
+table.wc th:nth-child(2),table.wc td:nth-child(2){text-align:left;padding-left:8px}
+table.wc td:nth-child(2){font-stretch:62%;font-weight:900;font-size:21px;text-transform:uppercase}
+table.wc th:nth-child(n+3),table.wc td:nth-child(n+3){width:44px}
+table.wc tr.cutline td{border-bottom:3px dashed var(--red)}
+table.wc tr.mtl td{background:var(--red);color:var(--white)}
+table.wc tr.mtl td:first-child,table.wc tr.mtl td.pts{color:var(--white)}
 /* Nouvelles */
 .news{background:var(--blue)}
 .news .h{color:var(--white)}

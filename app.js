@@ -195,6 +195,63 @@
       <p>Site de partisan non officiel, non affilié à la LNH ni au Club de hockey Canadien.</p>`;
   }
 
+  // Course aux séries (format LNH : 3 premiers de chaque division + 2 as par association).
+  // Rangs tels que publiés par la LNH dans standings.json (divisionSequence, wildcardSequence) :
+  // wildcardSequence vaut 0 pour les 3 premiers de division, puis 1, 2 (as), 3 et plus (hors séries).
+  function series(d, me, all) {
+    const h = `<h2 class="h cond">Course aux<br>séries</h2>`;
+    if (!me) return `<section class="blk white series">${h}${errBox("Course aux séries", d.errors.standings || "équipe introuvable")}</section>`;
+    const conf = all.filter((t) => t.conferenceAbbrev === me.conferenceAbbrev);
+    const okNum = (t) => [t.points, t.gamesPlayed, t.divisionSequence, t.wildcardSequence].every(Number.isFinite);
+    if (d.standings?.wildCardIndicator === false || conf.length < 8 || !conf.every(okNum))
+      return `<section class="blk white series">${h}${errBox("Course aux séries", "rangs des as absents du classement LNH")}</section>`;
+    const name = (t) => loc(t.teamCommonName) || t.teamAbbrev.default;
+    const ord = (n, fem) => (n === 1 ? (fem ? "1<sup>re</sup>" : "1<sup>er</sup>") : `${n}<sup>e</sup>`);
+    const pctF = new Intl.NumberFormat("fr-CA", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+    const pct = (t) => (Number.isFinite(t.pointPctg) ? pctF.format(t.pointPctg).replace(/^0(?=,)/, "") : "—");
+    const divName = me.divisionAbbrev === "A" ? "Atlantique" : me.divisionAbbrev === "M" ? "Métropolitaine" : me.divisionAbbrev === "C" ? "Centrale" : "Pacifique";
+    const confName = me.conferenceAbbrev === "E" ? "l’Est" : "l’Ouest";
+    const wc = conf.filter((t) => t.wildcardSequence > 0).sort((a, b) => a.wildcardSequence - b.wildcardSequence);
+    const wc2 = wc.find((t) => t.wildcardSequence === 2), firstOut = wc.find((t) => t.wildcardSequence === 3);
+    const div3 = conf.find((t) => t.divisionAbbrev === me.divisionAbbrev && t.divisionSequence === 3);
+    const inDiv = me.divisionSequence <= 3, inWc = me.wildcardSequence === 1 || me.wildcardSequence === 2, inside = inDiv || inWc;
+    const status = inDiv ? `${ord(me.divisionSequence, true)} place ${divName}` : inWc ? `${ord(me.wildcardSequence)} as de ${confName}` : `Hors des séries`;
+    const sub = inside ? "En position de séries" : `${ord(me.wildcardSequence)} parmi les as de ${confName}`;
+    const pts = (n) => `${n} pt${Math.abs(n) > 1 ? "s" : ""}`;
+    // Une ligne de comparaison : écart de points + matchs joués des deux équipes.
+    const cmp = (label, other, ahead) => {
+      if (!other) return "";
+      const gap = ahead ? me.points - other.points : other.points - me.points;
+      const gpDiff = other.gamesPlayed - me.gamesPlayed;
+      const gpTxt = gpDiff > 0 ? `le CH a ${gpDiff} match${gpDiff > 1 ? "s" : ""} en main` : gpDiff < 0 ? `le CH a joué ${-gpDiff} match${gpDiff < -1 ? "s" : ""} de plus` : "même nombre de matchs";
+      const head = ahead ? (gap > 0 ? `${pts(gap)} d’avance` : gap === 0 ? "À égalité" : `${pts(-gap)} de retard`)
+        : (gap > 0 ? `À ${pts(gap)}` : gap === 0 ? "À égalité" : `${pts(-gap)} d’avance`);
+      const vs = gap === 0 ? "avec les" : ahead ? (gap > 0 ? "sur les" : "sur les") : (gap > 0 ? "des" : "sur les");
+      return `<div class="sr-line"><div class="sr-lbl lbl">${label}</div>
+        <div class="sr-main"><b>${head}</b> ${vs} ${esc(name(other))} <span class="sr-gp">(${other.points} pts en ${other.gamesPlayed} PJ, ${pct(other)})</span></div>
+        <div class="sr-gp">CH : ${me.points} pts en ${me.gamesPlayed} PJ, ${pct(me)} · ${gpTxt}</div></div>`;
+    };
+    const lines = inside
+      ? cmp("Coussin sur la 1<sup>re</sup> équipe exclue", firstOut, true)
+      : cmp(`Dernière place en séries (2<sup>e</sup> as)`, wc2, false) + (div3 ? cmp(`3<sup>e</sup> place ${divName}`, div3, false) : "");
+    const showN = Math.min(wc.length, Math.max(5, (me.wildcardSequence || 0) + 1));
+    const rows = wc.slice(0, showN).map((t) => {
+      const isMe = t.teamAbbrev.default === MTL;
+      const gap = wc2 ? t.points - wc2.points : null;
+      const rank = t.wildcardSequence <= 2 ? `${ord(t.wildcardSequence)} as` : `${t.wildcardSequence}`;
+      return `<tr class="${isMe ? "mtl" : ""}${t.wildcardSequence === 2 ? " cutline" : ""}"><td>${rank}</td><td>${esc(name(t))}</td><td>${t.gamesPlayed}</td><td class="pts">${t.points}</td><td>${pct(t)}</td><td>${t.wildcardSequence <= 2 ? "—" : gap === null ? "—" : gap === 0 ? "0" : `−${-gap}`}</td></tr>`;
+    }).join("");
+    const asOf = new Intl.DateTimeFormat("fr-CA", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(me.date + "T12:00:00Z"));
+    return `<section class="blk white series">${h}
+      <div class="sr-status ${inside ? "in" : "out"}"><span class="cond">${status}</span><small>${sub}</small></div>
+      ${lines}
+      <h3 class="sr-h lbl">As de ${confName}</h3>
+      <table class="stats wc"><thead><tr><th>Rang</th><th>Équipe</th><th>PJ</th><th>PTS</th><th>%PTS</th><th>Écart</th></tr></thead><tbody>${rows}</tbody></table>
+      <p class="asof">Format LNH : les 3 premières équipes de chaque division et 2 as par association (les 2 meilleures des autres équipes) font les séries.
+      Rangs tels que publiés par la LNH au ${esc(asOf)} (en cas d’égalité de points : % de points, victoires en temps réglementaire, etc.).
+      Écart : points de retard sur le 2<sup>e</sup> as. %PTS : points obtenus sur points possibles.</p></section>`;
+  }
+
   load().then((d) => {
     const all = d.standings?.standings || [];
     const byAbbr = Object.fromEntries(all.map((t) => [t.teamAbbrev.default, t]));
@@ -203,7 +260,7 @@
     if (/^\d{8}$/.test(season)) seasonText = `Saison ${season.slice(0, 4)}-${season.slice(4)}`;
     const parts = [
       () => `<div id="hero-slot">${hero(d, byAbbr)}</div>`, () => staleBanner(d), () => band(d, me), () => results(d), () => sleeve,
-      () => standings(d, me, all), () => sleeve, () => news(d),
+      () => standings(d, me, all), () => series(d, me, all), () => sleeve, () => news(d),
     ];
     document.getElementById("app").innerHTML = parts.map((fn) => {
       try { return fn(); } catch (e) { console.error(e); return `<div class="blk">${errBox("Section", "erreur d’affichage")}</div>`; }
