@@ -33,6 +33,15 @@ python3 -m http.server 8000
 # puis ouvrir http://localhost:8000
 ```
 
+## Calendrier
+
+Page `calendrier.html` (script `calendrier.js`), onglet « Calendrier ». Elle lit `data/schedule.json`, déjà récupéré par la tâche planifiée.
+
+- Toute la saison, groupée par mois : date et heure de l’Est, adversaire, domicile ou étranger.
+- Matchs joués : V ou D, pointage du CH en premier, « Prol. » ou « T.B. ». Matchs à venir : heure et chaînes canadiennes.
+- Le prochain match (même règle que l’accueil) est mis en évidence et amené à l’écran au chargement.
+- Si `schedule.json` manque ou si la source est en échec dans `meta.json`, un message d’erreur s’affiche.
+
 ## Alignement et statistiques
 
 Page `alignement.html` (script `alignement.js`), accessible par l’onglet « Alignement ».
