@@ -195,16 +195,16 @@
       <p>Site de partisan non officiel, non affilié à la LNH ni au Club de hockey Canadien.</p>`;
   }
 
-  // Course aux séries (format LNH : 3 premiers de chaque division + 2 as par association).
+  // Course aux séries (format LNH : 3 premiers de chaque division + 2 équipes repêchées par association).
   // Rangs tels que publiés par la LNH dans standings.json (divisionSequence, wildcardSequence) :
-  // wildcardSequence vaut 0 pour les 3 premiers de division, puis 1, 2 (as), 3 et plus (hors séries).
+  // wildcardSequence vaut 0 pour les 3 premiers de division, puis 1, 2 (équipes repêchées), 3 et plus (hors séries).
   function series(d, me, all) {
     const h = `<h2 class="h cond">Course aux<br>séries</h2>`;
     if (!me) return `<section class="blk white series">${h}${errBox("Course aux séries", d.errors.standings || "équipe introuvable")}</section>`;
     const conf = all.filter((t) => t.conferenceAbbrev === me.conferenceAbbrev);
     const okNum = (t) => [t.points, t.gamesPlayed, t.divisionSequence, t.wildcardSequence].every(Number.isFinite);
     if (d.standings?.wildCardIndicator === false || conf.length < 8 || !conf.every(okNum))
-      return `<section class="blk white series">${h}${errBox("Course aux séries", "rangs des as absents du classement LNH")}</section>`;
+      return `<section class="blk white series">${h}${errBox("Course aux séries", "rangs des équipes repêchées absents du classement LNH")}</section>`;
     const name = (t) => loc(t.teamCommonName) || t.teamAbbrev.default;
     const ord = (n, fem) => (n === 1 ? (fem ? "1<sup>re</sup>" : "1<sup>er</sup>") : `${n}<sup>e</sup>`);
     const pctF = new Intl.NumberFormat("fr-CA", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
@@ -215,8 +215,8 @@
     const wc2 = wc.find((t) => t.wildcardSequence === 2), firstOut = wc.find((t) => t.wildcardSequence === 3);
     const div3 = conf.find((t) => t.divisionAbbrev === me.divisionAbbrev && t.divisionSequence === 3);
     const inDiv = me.divisionSequence <= 3, inWc = me.wildcardSequence === 1 || me.wildcardSequence === 2, inside = inDiv || inWc;
-    const status = inDiv ? `${ord(me.divisionSequence, true)} place ${divName}` : inWc ? `${ord(me.wildcardSequence)} as de ${confName}` : `Hors des séries`;
-    const sub = inside ? "En position de séries" : `${ord(me.wildcardSequence)} parmi les as de ${confName}`;
+    const status = inDiv ? `${ord(me.divisionSequence, true)} place ${divName}` : inWc ? `${ord(me.wildcardSequence, true)} équipe repêchée dans ${confName}` : `Hors des séries`;
+    const sub = inside ? "En position de séries" : `${ord(me.wildcardSequence)} dans la course aux places de repêchage`;
     const pts = (n) => `${n} pt${Math.abs(n) > 1 ? "s" : ""}`;
     // Une ligne de comparaison : écart de points + matchs joués des deux équipes.
     const cmp = (label, other, ahead) => {
@@ -233,23 +233,23 @@
     };
     const lines = inside
       ? cmp("Coussin sur la 1<sup>re</sup> équipe exclue", firstOut, true)
-      : cmp(`Dernière place en séries (2<sup>e</sup> as)`, wc2, false) + (div3 ? cmp(`3<sup>e</sup> place ${divName}`, div3, false) : "");
+      : cmp(`Dernière place en séries (2<sup>e</sup> équipe repêchée)`, wc2, false) + (div3 ? cmp(`3<sup>e</sup> place ${divName}`, div3, false) : "");
     const showN = Math.min(wc.length, Math.max(5, (me.wildcardSequence || 0) + 1));
     const rows = wc.slice(0, showN).map((t) => {
       const isMe = t.teamAbbrev.default === MTL;
       const gap = wc2 ? t.points - wc2.points : null;
-      const rank = t.wildcardSequence <= 2 ? `${ord(t.wildcardSequence)} as` : `${t.wildcardSequence}`;
+      const rank = t.wildcardSequence <= 2 ? `${ord(t.wildcardSequence, true)}` : `${t.wildcardSequence}`;
       return `<tr class="${isMe ? "mtl" : ""}${t.wildcardSequence === 2 ? " cutline" : ""}"><td>${rank}</td><td>${esc(name(t))}</td><td>${t.gamesPlayed}</td><td class="pts">${t.points}</td><td>${pct(t)}</td><td>${t.wildcardSequence <= 2 ? "—" : gap === null ? "—" : gap === 0 ? "0" : `−${-gap}`}</td></tr>`;
     }).join("");
     const asOf = new Intl.DateTimeFormat("fr-CA", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(me.date + "T12:00:00Z"));
     return `<section class="blk white series">${h}
       <div class="sr-status ${inside ? "in" : "out"}"><span class="cond">${status}</span><small>${sub}</small></div>
       ${lines}
-      <h3 class="sr-h lbl">As de ${confName}</h3>
+      <h3 class="sr-h lbl">Places de repêchage dans ${confName}</h3>
       <table class="stats wc"><thead><tr><th>Rang</th><th>Équipe</th><th>PJ</th><th>PTS</th><th>%PTS</th><th>Écart</th></tr></thead><tbody>${rows}</tbody></table>
-      <p class="asof">Format LNH : les 3 premières équipes de chaque division et 2 as par association (les 2 meilleures des autres équipes) font les séries.
+      <p class="asof">Format LNH : les 3 premières équipes de chaque division et les 2 équipes repêchées de chaque association (les 2 meilleures parmi les autres équipes) font les séries.
       Rangs tels que publiés par la LNH au ${esc(asOf)} (en cas d’égalité de points : % de points, victoires en temps réglementaire, etc.).
-      Écart : points de retard sur le 2<sup>e</sup> as. %PTS : points obtenus sur points possibles.</p></section>`;
+      Rangs 1 et 2 : les 2 équipes repêchées. Écart : points de retard sur la 2<sup>e</sup> équipe repêchée. %PTS : points obtenus sur points possibles.</p></section>`;
   }
 
   load().then((d) => {
