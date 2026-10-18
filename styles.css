@@ -284,12 +284,11 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
 /* ---------- Grand écran : mêmes pages, le téléphone ne change pas ---------- */
 /* Accueil, match, joueur : une colonne centrée, comme un site web. Calendrier et alignement : en colonnes. */
 @media (min-width:1024px){
-  :root{--maxw:900px;--gut:max(0px,calc((100vw - var(--maxw)) / 2))}
+  :root{--maxw:900px}
   :root:has(main>.cal-month,main>.blk>.roster:not(.l5)){--maxw:1440px}
-  body{background:var(--cream)}
-  /* Navigation et pied de page : bandes bleues pleine largeur, contenu aligné sur la colonne */
-  .tabs{padding-left:calc(var(--gut) + 10px);padding-right:calc(var(--gut) + 10px)}
-  footer{padding-left:calc(var(--gut) + 18px);padding-right:calc(var(--gut) + 18px)}
+  /* Drapeau : bleu | bande blanche (colonne + 28 px de chaque côté) | rouge ; navigation et pied de page de la largeur de la colonne */
+  body{--fw:min(100vw,calc(var(--maxw) + 56px));background:linear-gradient(90deg,var(--blue) 0 calc(50% - var(--fw) / 2),var(--cream) 0 calc(50% + var(--fw) / 2),var(--red) 0);padding:28px 0}
+  .tabs,footer{max-width:var(--maxw);margin-left:auto;margin-right:auto}
   main{max-width:var(--maxw);margin:0 auto;background:var(--red)}
   /* Accueil plein : héros en deux moitiés (match | face-à-face), fiche en une rangée, titres sur une ligne */
   .h br{display:none}
