@@ -251,7 +251,7 @@
       <table class="stats wc"><thead><tr><th>Rang</th><th>Équipe</th><th>PJ</th><th>PTS</th><th>%PTS</th><th>Écart</th></tr></thead><tbody>${rows}</tbody></table>
       <p class="asof">Format LNH : les 3 premières équipes de chaque division et les 2 équipes repêchées de chaque association (les 2 meilleures parmi les autres équipes) font les séries.
       Rangs tels que publiés par la LNH au ${esc(asOf)} (en cas d’égalité de points : % de points, victoires en temps réglementaire, etc.).
-      Rangs 1 et 2 : les 2 équipes repêchées. Écart : points de retard sur la 2<sup>e</sup> équipe repêchée. %PTS : points obtenus sur points possibles.</p></section>`;
+      Rangs 1 et 2 (sur fond blanc) : les 2 équipes repêchées. Écart : points de retard sur la 2<sup>e</sup> équipe repêchée. %PTS : points obtenus sur points possibles.</p></section>`;
   }
 
   load().then((d) => {
