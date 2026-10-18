@@ -33,6 +33,16 @@ python3 -m http.server 8000
 # puis ouvrir http://localhost:8000
 ```
 
+## Alignement et statistiques
+
+Page `alignement.html` (script `alignement.js`), accessible par l’onglet « Alignement ».
+
+- `data/roster.json` : `/v1/roster/MTL/current` (numéro, nom, position, date de naissance, main).
+- `data/stats.json` : `/v1/club-stats/MTL/now` (patineurs : PJ, B, A, PTS, +/- ; gardiens : PJ, V, D, DP, %ARR, MOY).
+- Les liens vers les photos des joueurs sont retirés des fichiers : aucune photo n’est affichée.
+- L’âge est calculé à la date du jour (heure de l’Est). Les meneurs (points, buts, passes) sont calculés à partir de `stats.json`. Les égalités sont toutes nommées (deux noms au plus, puis « +N »).
+- Si une source est en échec, la section concernée affiche un message d’erreur et le pied de page la nomme.
+
 ## Worker Cloudflare (pointage en direct)
 
 - Adresse : `https://tricolore.tricolore.workers.dev` (constante `WORKER_DEFAULT` dans `app.js`).

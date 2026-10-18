@@ -2,7 +2,9 @@
 // Node 20+, aucune dépendance. Utilisé localement et par .github/workflows/data.yml.
 //
 // - data/<source>.json : réponse brute de l'API (seul le champ volatil
-//   standings.standingsDateTimeUtc est retiré pour éviter un commit à chaque exécution).
+//   standings.standingsDateTimeUtc est retiré pour éviter un commit à chaque exécution;
+//   les liens vers les photos des joueurs (headshot) de roster et stats sont aussi retirés,
+//   le site n'affiche aucune photo).
 // - data/meta.json : updatedAt (dernière modification des données), checkedAt (dernière
 //   vérification réussie, rafraîchie au moins aux 45 min pour que la page détecte un arrêt)
 //   et état de chaque source.
@@ -20,6 +22,8 @@ const SOURCES = {
   schedule: "/club-schedule-season/MTL/now",
   scoreboard: "/scoreboard/MTL/now",
   standings: "/standings/now",
+  roster: "/roster/MTL/current",
+  stats: "/club-stats/MTL/now",
 };
 const DIR = new URL("../data/", import.meta.url);
 
@@ -40,6 +44,7 @@ for (const [name, path] of Object.entries(SOURCES)) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     if (name === "standings") delete json.standingsDateTimeUtc;
+    if (name === "roster" || name === "stats") for (const list of Object.values(json)) if (Array.isArray(list)) for (const p of list) delete p.headshot;
     const text = JSON.stringify(json);
     if (text !== (await readText(`${name}.json`))) {
       await writeFile(new URL(`${name}.json`, DIR), text);
