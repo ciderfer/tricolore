@@ -3,6 +3,9 @@
 // seulement pour le site (et localhost en développement). Aucun secret.
 // Feuilles de match (gamecenter) : seulement les matchs où joue le Canadien, vérifié avec
 // la page « landing » du match. Cache : 5 s en direct, plus long pour un match terminé.
+// Minuterie (scheduled, voir wrangler.toml) : aux 15 minutes, lance la tâche « Données LNH »
+// sur GitHub (workflow_dispatch), parce que l'horaire de GitHub Actions saute la plupart
+// des exécutions. Seul secret : GH_TOKEN, un jeton limité à ce repo (Actions : écriture).
 
 const UPSTREAM = "https://api-web.nhle.com";
 
@@ -54,7 +57,22 @@ async function getUpstream(path, ttl, now, fallbackTtl = 5) {
   return { ...entry, cache: "MISS" };
 }
 
+const DISPATCH = "https://api.github.com/repos/ciderfer/tricolore/actions/workflows/data.yml/dispatches";
+
 export default {
+  async scheduled(_event, env) {
+    if (!env.GH_TOKEN) throw new Error("GH_TOKEN manquant : tâche de données non lancée");
+    const r = await fetch(DISPATCH, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${env.GH_TOKEN}`, accept: "application/vnd.github+json",
+        "x-github-api-version": "2022-11-28", "user-agent": "tricolore-worker",
+      },
+      body: JSON.stringify({ ref: "main" }),
+    });
+    if (r.status !== 204) throw new Error(`GitHub : HTTP ${r.status} ${await r.text()}`);
+  },
+
   async fetch(request) {
     const origin = request.headers.get("Origin") || "";
     const okOrigin = ALLOWED_ORIGIN.test(origin) ? origin : null;
