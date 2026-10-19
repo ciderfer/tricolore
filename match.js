@@ -102,7 +102,7 @@
   function goals(L) {
     const h = `<h2 class="h cond">Buts</h2>`;
     const sc = L.summary?.scoring;
-    if (!Array.isArray(sc)) return `<section class="blk">${h}${errBox("Buts", "sommaire absent")}</section>`;
+    if (!Array.isArray(sc)) return `<section class="blk goals-blk">${h}${errBox("Buts", "sommaire absent")}</section>`;
     if (!sc.some((p) => p.goals?.length) && !DONE.has(L.gameState) && !LIVE.has(L.gameState)) return "";
     const rows = sc.map((p) => {
       const list = (p.goals || []).map((g) => {
@@ -120,7 +120,7 @@
     }).join("");
     const so = L.summary?.shootout;
     const shoot = Array.isArray(so) && so.length ? `<h3 class="grp lbl">Tirs de barrage</h3><ul class="goals">${so.map((t) => `<li class="gl ${loc(t.teamAbbrev) === MTL ? "mtl" : ""}"><span class="gl-t num">${esc(t.sequence ?? "")}</span><span class="gl-who"><span class="gl-team">${esc(loc(t.teamAbbrev) || "")}</span> <b class="cond">${esc(initial(t))}</b><span class="gl-ast">${t.result === "goal" ? "But" : t.result === "save" ? "Arrêt" : "Raté"}</span></span><span class="gl-sc num">${fin(t.awayScore) && fin(t.homeScore) ? `${t.awayScore}-${t.homeScore}` : ""}</span></li>`).join("")}</ul>` : "";
-    return `<section class="blk">${h}${rows}${shoot}<p class="legend">Pointage visiteurs-locaux après chaque but. AN avantage numérique · DN désavantage numérique · FD filet désert. Entre parenthèses : total de la saison.</p></section>`;
+    return `<section class="blk goals-blk">${h}${rows}${shoot}<p class="legend">Pointage visiteurs-locaux après chaque but. AN avantage numérique · DN désavantage numérique · FD filet désert. Entre parenthèses : total de la saison.</p></section>`;
   }
 
   function shots(L, R, err) {
@@ -128,7 +128,7 @@
     if (!R) {
       const base = fin(L.awayTeam.sog) && fin(L.homeTeam.sog)
         ? `<p class="asof">Tirs au but : ${esc(L.awayTeam.abbrev)} ${L.awayTeam.sog} · ${esc(L.homeTeam.abbrev)} ${L.homeTeam.sog}</p>` : "";
-      return `<section class="blk white">${h}${base}${errBox("Tirs par période et statistiques d’équipe", err || "données absentes")}</section>`;
+      return `<section class="blk white shots-blk">${h}${base}${errBox("Tirs par période et statistiques d’équipe", err || "données absentes")}</section>`;
     }
     const sbp = Array.isArray(R.shotsByPeriod) ? R.shotsByPeriod : [];
     const per = (pd) => pd.periodType === "SO" ? "TB" : pd.periodType === "OT" ? (pd.number - (pd.maxRegulationPeriods || 3) > 1 ? `P${pd.number - 3}` : "Prol.") : `${pd.number}`;
@@ -141,16 +141,16 @@
     const st = (R.teamGameStats || []).filter((s) => LABEL[s.category]);
     const list = st.length ? `<table class="stats tstats"><thead><tr><th></th><th>${esc(L.awayTeam.abbrev)}</th><th>${esc(L.homeTeam.abbrev)}</th></tr></thead><tbody>
       ${st.map((s) => `<tr><td>${LABEL[s.category]}</td><td>${fmt(s.category, s.awayValue)}</td><td>${fmt(s.category, s.homeValue)}</td></tr>`).join("")}</tbody></table>` : "";
-    return `<section class="blk white">${h}${tbl}${list}</section>`;
+    return `<section class="blk white shots-blk">${h}${tbl}${list}</section>`;
   }
 
   function goalies(L, B, err) {
     const h = `<h2 class="h cond">Gardiens</h2>`;
-    if (!B?.playerByGameStats) return `<section class="blk white">${h}${errBox("Gardiens", err || "données absentes")}</section>`;
+    if (!B?.playerByGameStats) return `<section class="blk white gk-blk">${h}${errBox("Gardiens", err || "données absentes")}</section>`;
     const rows = [["awayTeam", L.awayTeam.abbrev], ["homeTeam", L.homeTeam.abbrev]].flatMap(([side, ab]) =>
       (B.playerByGameStats[side]?.goalies || []).filter((g) => g.toi && g.toi !== "00:00").map((g) => ({ ...g, ab })));
-    if (!rows.length) return `<section class="blk white">${h}<p class="asof">Aucun gardien n’a encore joué.</p></section>`;
-    return `<section class="blk white">${h}<table class="stats gk"><thead><tr><th>Gardien</th><th>Arrêts</th><th>%ARR</th><th>Temps</th></tr></thead><tbody>
+    if (!rows.length) return `<section class="blk white gk-blk">${h}<p class="asof">Aucun gardien n’a encore joué.</p></section>`;
+    return `<section class="blk white gk-blk">${h}<table class="stats gk"><thead><tr><th>Gardien</th><th>Arrêts</th><th>%ARR</th><th>Temps</th></tr></thead><tbody>
       ${rows.map((g) => `<tr class="${g.ab === MTL ? "mtl" : ""}"><td><span class="nm">${esc(loc(g.name))}</span><span class="ps">${esc(g.ab)}${g.decision && DECISION[g.decision] ? ` · ${DECISION[g.decision]}` : ""}</span></td>
         <td>${fin(g.saves) && fin(g.shotsAgainst) ? `${g.saves}/${g.shotsAgainst}` : esc(g.saveShotsAgainst || "—")}</td><td class="pts">${pct(g.savePctg)}</td><td>${esc(g.toi)}</td></tr>`).join("")}
       </tbody></table></section>`;
@@ -168,9 +168,9 @@
   function penalties(L) {
     const ps = L.summary?.penalties;
     const h = `<h2 class="h cond">Pénalités</h2>`;
-    if (!Array.isArray(ps)) return `<section class="blk">${h}${errBox("Pénalités", "sommaire absent")}</section>`;
+    if (!Array.isArray(ps)) return `<section class="blk pen-blk">${h}${errBox("Pénalités", "sommaire absent")}</section>`;
     const any = ps.some((p) => p.penalties?.length);
-    if (!any) return DONE.has(L.gameState) || LIVE.has(L.gameState) ? `<section class="blk">${h}<p class="none">Aucune pénalité.</p></section>` : "";
+    if (!any) return DONE.has(L.gameState) || LIVE.has(L.gameState) ? `<section class="blk pen-blk">${h}<p class="none">Aucune pénalité.</p></section>` : "";
     return `<section class="blk pen-blk">${h}${ps.filter((p) => p.penalties?.length).map((p) => `<h3 class="grp lbl">${periodName(p.periodDescriptor)}</h3><ul class="pens">
       ${p.penalties.map((x) => {
         const server = typeof x.servedBy === "string" ? x.servedBy : loc(x.servedBy) || (x.servedBy?.lastName ? initial(x.servedBy) : "");

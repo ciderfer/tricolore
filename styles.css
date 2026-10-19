@@ -327,6 +327,22 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
   .blk:has(>.roster:not(.l5))>.roster{grid-row:3;align-self:start}
   .blk:has(>.roster:not(.l5))>.roster:first-of-type{columns:2;column-gap:18px}
   .blk:has(>.roster:not(.l5)) .pl{margin-left:0;margin-right:0;padding-left:8px;padding-right:8px;break-inside:avoid}
+  /* Feuille de match : score | tirs et statistiques, trois étoiles | gardiens, buts | pénalités (filets blancs de 10 px) */
+  main:has(>.shots-blk),main:has(>.l5-blk){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;background:var(--white)}
+  main:has(>.shots-blk)>*,main:has(>.l5-blk)>*{grid-column:1/-1;order:9}
+  main:has(>.shots-blk)>:not(.white,.band),main:has(>.l5-blk)>:not(.white,.band,.sleeve){background:var(--red)}
+  main:has(>.shots-blk)>.hero{grid-column:1;order:1}
+  main:has(>.shots-blk)>.shots-blk{grid-column:2;order:2}
+  main:has(>.shots-blk)>.goals-blk{grid-column:1;order:5}
+  main:has(>.shots-blk)>.pen-blk{grid-column:2;order:6}
+  main:has(>.shots-blk)>.band{grid-column:1;order:3;border:0}
+  main:has(>.shots-blk)>.gk-blk{grid-column:2;order:4}
+  /* Fiche joueur : identité | saison, 5 derniers matchs | carrière */
+  main:has(>.l5-blk)>.hero{grid-column:1;order:1}
+  main:has(>.l5-blk)>.band{grid-column:2;order:2;border:0}
+  main:has(>.l5-blk)>.l5-blk{grid-column:1;order:3}
+  main:has(>.l5-blk)>.car-blk{grid-column:2;order:4}
+  main:has(>.l5-blk)>.sleeve{display:none}
 }
 @media (min-width:1240px){
   main:has(>.cal-month){grid-template-columns:repeat(3,minmax(0,1fr))}

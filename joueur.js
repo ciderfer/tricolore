@@ -80,7 +80,7 @@
   function last5(p) {
     const h = `<h2 class="h cond">5 derniers matchs</h2>`;
     const games = (p.last5Games || []).filter((x) => x.gameDate);
-    if (!games.length) return `<section class="blk">${h}<p class="pj-none">Aucun match récent dans la LNH.</p></section>`;
+    if (!games.length) return `<section class="blk l5-blk">${h}<p class="pj-none">Aucun match récent dans la LNH.</p></section>`;
     const g = p.position === "G";
     const DEC = { W: "V", L: "D", O: "DP" };
     const rows = games.map((x) => {
@@ -93,18 +93,18 @@
         ${id ? `<a class="pl-link pl-id" href="match.html?id=${id}">` : `<span class="pl-id">`}${who}<span class="pl-info">${line.filter(Boolean).map(esc).join(" · ")}</span>${id ? "</a>" : "</span>"}
         ${!g && fin(x.points) ? `<span class="l5-pts num">${x.points}</span>` : ""}</li>`;
     }).join("");
-    return `<section class="blk">${h}<ul class="roster l5">${rows}</ul><p class="legend">vs à domicile · @ à l’étranger${g ? " · V victoire · D défaite · DP défaite en prolongation ou tirs de barrage" : " · à droite : points du match"}.</p></section>`;
+    return `<section class="blk l5-blk">${h}<ul class="roster l5">${rows}</ul><p class="legend">vs à domicile · @ à l’étranger${g ? " · V victoire · D défaite · DP défaite en prolongation ou tirs de barrage" : " · à droite : points du match"}.</p></section>`;
   }
 
   function career(p) {
     const h = `<h2 class="h cond">Carrière LNH</h2>`;
     const c = p.careerTotals;
-    if (!c || (!c.regularSeason && !c.playoffs)) return `<section class="blk white">${h}<p class="asof">Aucune statistique de carrière dans la LNH.</p></section>`;
+    if (!c || (!c.regularSeason && !c.playoffs)) return `<section class="blk white car-blk">${h}<p class="asof">Aucune statistique de carrière dans la LNH.</p></section>`;
     const g = p.position === "G";
     const cols = g ? [["PJ", (s) => n(s.gamesPlayed)], ["V", (s) => n(s.wins)], ["D", (s) => n(s.losses)], ["DP", (s) => n(s.otLosses)], ["%ARR", (s) => pct(s.savePctg)], ["MOY", (s) => gaa(s.goalsAgainstAvg)], ["BL", (s) => n(s.shutouts)]]
       : [["PJ", (s) => n(s.gamesPlayed)], ["B", (s) => n(s.goals)], ["A", (s) => n(s.assists)], ["PTS", (s) => n(s.points)], ["+/-", (s) => signed(s.plusMinus)], ["PUN", (s) => n(s.pim)]];
     const row = (label, s) => (s ? `<tr><td><span class="nm">${label}</span></td>${cols.map(([, f]) => `<td>${esc(f(s))}</td>`).join("")}</tr>` : "");
-    return `<section class="blk white">${h}<table class="stats car ${g ? "g" : ""}"><thead><tr><th>Carrière</th>${cols.map(([k]) => `<th>${k}</th>`).join("")}</tr></thead>
+    return `<section class="blk white car-blk">${h}<table class="stats car ${g ? "g" : ""}"><thead><tr><th>Carrière</th>${cols.map(([k]) => `<th>${k}</th>`).join("")}</tr></thead>
       <tbody>${row("Saison", c.regularSeason)}${row("Séries", c.playoffs)}</tbody></table><p class="asof">Totaux en carrière dans la LNH (saison en cours incluse).</p></section>`;
   }
 
