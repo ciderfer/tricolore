@@ -3,3 +3,7 @@ main = "index.js"
 compatibility_date = "2026-05-01"
 account_id = "07474c841454930c64f4fd78088ca948"
 workers_dev = true
+
+# Lance la tâche « Données LNH » aux 15 minutes (heure UTC), voir scheduled() dans index.js.
+[triggers]
+crons = ["*/15 * * * *"]

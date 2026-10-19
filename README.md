@@ -7,7 +7,7 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 
 - Site statique (HTML, CSS, JavaScript), aucune étape de compilation.
 - Données : [API publique de la LNH](https://api-web.nhle.com/v1/). Elle n’autorise pas les appels depuis un navigateur (pas d’en-tête CORS). Deux chemins :
-  - **Fichiers du site** : une GitHub Action récupère les données aux 15 minutes et les enregistre dans `data/`. La page s’affiche tout de suite avec ces fichiers.
+  - **Fichiers du site** : une GitHub Action récupère les données aux 15 minutes et les enregistre dans `data/`. Elle est lancée par la minuterie du Worker Cloudflare (l’horaire de GitHub Actions saute la plupart des exécutions et ne sert plus que de filet de sécurité). La page s’affiche tout de suite avec ces fichiers.
   - **Pointage en direct** : quand un match est en cours ou commence dans moins de 30 minutes, la page interroge aux 15 secondes un petit Worker Cloudflare (`worker/`) qui relaie seulement quelques chemins de l’API LNH. Si le Worker ne répond pas, la page revient aux fichiers du site et l’indique.
 - Si les fichiers du site n’ont pas été vérifiés depuis plus de 90 minutes, la page affiche un avertissement.
 - Aucune donnée inventée : si une source échoue, la page l’indique clairement au lieu d’afficher autre chose.
@@ -23,7 +23,7 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 | `data/` | `schedule.json`, `scoreboard.json`, `standings.json`, `news.json`, `meta.json` |
 | `.github/workflows/data.yml` | Mise à jour des données aux 15 minutes (et sur demande) |
 | `.github/workflows/pages.yml` | Déploiement sur GitHub Pages depuis `main` |
-| `worker/` | Proxy Cloudflare pour le pointage en direct |
+| `worker/` | Proxy Cloudflare pour le pointage en direct, et minuterie qui lance la tâche de données aux 15 minutes (secret `GH_TOKEN` : jeton GitHub limité à ce repo, permission Actions en écriture) |
 
 ## En local
 

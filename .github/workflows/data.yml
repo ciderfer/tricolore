@@ -1,8 +1,10 @@
 name: Données LNH
 
 on:
+  # Déclencheur principal : la minuterie du Worker Cloudflare (worker/) aux 15 minutes.
+  # L'horaire de GitHub reste en filet de sécurité, hors des minutes chargées (:00, :15, :30, :45).
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "8,38 * * * *"
   workflow_dispatch:
 
 permissions:
