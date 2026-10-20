@@ -1,53 +1,66 @@
 // Tricolore — feuille de match (match.html?id=AAAATTNNNN).
 // Données : pages « landing », « boxscore » et « right-rail » du match, via le Worker Cloudflare
-// (worker/). En direct : mise à jour aux 15 s tant que l'onglet est visible.
+// (worker/). En direct, tant que l'onglet est visible : « landing » (pointage, buts, pénalités) aux 15 s,
+// « boxscore » et « right-rail » (gardiens, tirs, statistiques) chaque minute, pour ménager le quota
+// du relais; la page l'indique. À la fin du match, tout est relu une dernière fois.
 // Si le Worker échoue, on affiche le pointage du calendrier du site (data/schedule.json) s'il existe,
 // avec un message clair. Règle d'or : aucune donnée inventée.
 (function () {
   "use strict";
-  const TZ = "America/Toronto";
-  const MTL = "MTL";
-  const LIVE = new Set(["LIVE", "CRIT"]);
-  const DONE = new Set(["OFF", "FINAL"]);
-  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const loc = (o) => (o ? o.fr || o.default : "");
-  const fin = (n) => typeof n === "number" && Number.isFinite(n);
-  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-  const F = (o) => new Intl.DateTimeFormat("fr-CA", { timeZone: TZ, ...o });
+  const { MTL, LIVE, DONE, esc, loc, fin, cap, F, pct, WORKER, POLL_MS, WORDMARK, UNOFFICIAL } = T;
   const fDate = F({ weekday: "long", day: "numeric", month: "long" });
   const fH = F({ hour: "numeric", hourCycle: "h23" }), fM = F({ minute: "2-digit" });
   const hm = (d) => `${fH.format(d).replace(/\D/g, "")} h ${fM.format(d).padStart(2, "0")}`;
-  const fPct = new Intl.NumberFormat("fr-CA", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
-  const pct = (v) => (fin(v) ? fPct.format(v).replace(/^0(?=,)/, "") : "—");
-
-  const WORKER_DEFAULT = "https://tricolore.tricolore.workers.dev";
-  const WORKER = (() => {
-    const q = new URLSearchParams(location.search).get("worker");
-    return q && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(q) ? q : WORKER_DEFAULT;
-  })();
-  const POLL_MS = 15_000;
+  const SLOW_MS = 60_000; // gardiens, tirs et statistiques : chaque minute pendant le match
   const ID = new URLSearchParams(location.search).get("id") || "";
 
-  const errBox = (what, detail) =>
-    `<div class="err">${esc(what)} : source indisponible${detail ? ` (${esc(detail)})` : ""}. Aucune donnée affichée plutôt qu’une donnée inexacte.</div>`;
-  const top = () => `<div class="top"><div class="wordmark">Tri<i></i>co<i></i>lore</div><div class="lbl">Feuille de match</div></div>`;
+  const errBox = (what, detail) => T.errBox(what, detail, false);
+  // Lien retour : en mode app (écran d'accueil), il n'y a pas de bouton retour de Safari.
+  // Si on arrive d'une page du site, on y revient (history.back garde la position dans la page);
+  // sinon (lien partagé, favori), on va au calendrier.
+  const BACK = (() => {
+    try {
+      const r = new URL(document.referrer);
+      if (r.origin === location.origin && !/\/match\.html$/.test(r.pathname)) return { href: r.href, label: "‹ Retour", history: true };
+    } catch { /* pas de page précédente */ }
+    return { href: "calendrier.html", label: "‹ Calendrier", history: false };
+  })();
+  document.addEventListener("click", (e) => {
+    if (BACK.history && history.length > 1 && e.target.closest?.("a.back")) { e.preventDefault(); history.back(); }
+  });
+  const top = () => `<div class="top"><h1 class="wordmark" aria-label="Tricolore · Feuille de match">${WORDMARK}</h1><div class="lbl"><a class="back" href="${esc(BACK.href)}">${BACK.label}</a></div></div>`;
 
   async function viaWorker(part) {
-    const r = await fetch(`${WORKER}/v1/gamecenter/${ID}/${part}`, { cache: "no-store" });
+    const r = await fetch(`${WORKER}/v1/gamecenter/${ID}/${part}`, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
     let body = null;
     try { body = await r.json(); } catch { /* corps illisible */ }
     if (!r.ok) throw new Error(body?.error || `HTTP ${r.status}`);
     if (!body || String(body.id ?? ID) !== ID && part !== "right-rail") throw new Error("réponse inattendue");
     return { body, at: r.headers.get("x-tricolore-fetched-at") };
   }
-  async function loadAll() {
-    const out = { errors: {} };
-    await Promise.all(["landing", "boxscore", "right-rail"].map(async (p) => {
-      try { const r = await viaWorker(p); out[p] = r.body; if (p === "landing") out.at = r.at; }
-      catch (e) { out.errors[p] = e.message; out[p] = null; }
-    }));
-    return out;
+  async function part(p) {
+    try { return await viaWorker(p); }
+    catch (e) { return { err: e.name === "TimeoutError" ? "délai dépassé" : e.message }; }
   }
+  // Dernière lecture de boxscore et right-rail. Une lecture en échec efface l'ancienne (pas de données périmées).
+  const slow = { boxscore: null, "right-rail": null, errors: {}, at: 0, when: null };
+  async function readSlow() {
+    const res = await Promise.all(["boxscore", "right-rail"].map(part));
+    slow.at = Date.now();
+    slow.when = new Date(Date.parse(res[0].at || res[1].at || "") || slow.at);
+    ["boxscore", "right-rail"].forEach((k, i) => { slow[k] = res[i].body || null; slow.errors[k] = res[i].err; });
+  }
+  async function loadAll(first) {
+    const due = first || Date.now() - slow.at >= SLOW_MS;
+    const [l] = await Promise.all([part("landing"), due ? readSlow() : null]);
+    // Pas en direct (fin du match, entre autres) : tout relire tout de suite, pour un affichage final complet.
+    if (!due && l.body && !LIVE.has(l.body.gameState)) await readSlow();
+    return { landing: l.body || null, at: l.at, boxscore: slow.boxscore, "right-rail": slow["right-rail"],
+      errors: { landing: l.err, ...slow.errors }, slowWhen: slow.when };
+  }
+  // Note sous les sections lues chaque minute, pendant le match seulement.
+  const slowNote = (L, when) => LIVE.has(L.gameState)
+    ? `<p class="asof slow-note">Mis à jour chaque minute pendant le match${when ? ` (dernière lecture à ${esc(hm(when))})` : ""}.</p>` : "";
   async function staticGame() {
     try {
       const r = await fetch("data/schedule.json", { cache: "no-cache" });
@@ -92,7 +105,7 @@
       <div class="sc num">${fin(t.score) ? t.score : "–"}</div></div>`;
     const dt = new Date(L.startTimeUTC);
     const asOf = at ? hm(new Date(at)) : null;
-    const how = live ? `Données en direct${asOf ? ` en date de ${esc(asOf)}` : ""} (heure de l’Est), mises à jour aux 15 secondes.` : "";
+    const how = live ? `Pointage, buts et pénalités en direct${asOf ? ` en date de ${esc(asOf)}` : ""} (heure de l’Est), mis à jour aux 15 secondes. Tirs, statistiques et gardiens : chaque minute.` : "";
     return `<section class="hero">${top()}
       <div class="lbl kick ${live ? "live-kick" : ""}">${kick}</div>
       <div class="board">${row(L.awayTeam, "Visiteurs")}${row(L.homeTeam, "Locaux")}</div>
@@ -123,7 +136,7 @@
     return `<section class="blk goals-blk">${h}${rows}${shoot}<p class="legend">Pointage visiteurs-locaux après chaque but. AN avantage numérique · DN désavantage numérique · FD filet désert. Entre parenthèses : total de la saison.</p></section>`;
   }
 
-  function shots(L, R, err) {
+  function shots(L, R, err, when) {
     const h = `<h2 class="h cond">Tirs et statistiques</h2>`;
     if (!R) {
       const base = fin(L.awayTeam.sog) && fin(L.homeTeam.sog)
@@ -131,7 +144,10 @@
       return `<section class="blk white shots-blk">${h}${base}${errBox("Tirs par période et statistiques d’équipe", err || "données absentes")}</section>`;
     }
     const sbp = Array.isArray(R.shotsByPeriod) ? R.shotsByPeriod : [];
-    const per = (pd) => pd.periodType === "SO" ? "TB" : pd.periodType === "OT" ? (pd.number - (pd.maxRegulationPeriods || 3) > 1 ? `P${pd.number - 3}` : "Prol.") : `${pd.number}`;
+    const per = (pd) => {
+      const k = pd.number - (pd.maxRegulationPeriods || 3); // rang de la prolongation
+      return pd.periodType === "SO" ? "TB" : pd.periodType === "OT" ? (k > 1 ? `P${k}` : "Prol.") : `${pd.number}`;
+    };
     const tot = (k) => sbp.reduce((s, p) => s + (fin(p[k]) ? p[k] : 0), 0);
     const tbl = sbp.length ? `<table class="stats shots"><thead><tr><th>Tirs</th>${sbp.map((p) => `<th>${per(p.periodDescriptor)}</th>`).join("")}<th>Total</th></tr></thead><tbody>
       <tr class="${L.awayTeam.abbrev === MTL ? "mtl" : ""}"><td><span class="nm">${esc(L.awayTeam.abbrev)}</span></td>${sbp.map((p) => `<td>${fin(p.away) ? p.away : "—"}</td>`).join("")}<td class="pts">${tot("away")}</td></tr>
@@ -141,10 +157,10 @@
     const st = (R.teamGameStats || []).filter((s) => LABEL[s.category]);
     const list = st.length ? `<table class="stats tstats"><thead><tr><th></th><th>${esc(L.awayTeam.abbrev)}</th><th>${esc(L.homeTeam.abbrev)}</th></tr></thead><tbody>
       ${st.map((s) => `<tr><td>${LABEL[s.category]}</td><td>${fmt(s.category, s.awayValue)}</td><td>${fmt(s.category, s.homeValue)}</td></tr>`).join("")}</tbody></table>` : "";
-    return `<section class="blk white shots-blk">${h}${tbl}${list}</section>`;
+    return `<section class="blk white shots-blk">${h}${tbl}${list}${slowNote(L, when)}</section>`;
   }
 
-  function goalies(L, B, err) {
+  function goalies(L, B, err, when) {
     const h = `<h2 class="h cond">Gardiens</h2>`;
     if (!B?.playerByGameStats) return `<section class="blk white gk-blk">${h}${errBox("Gardiens", err || "données absentes")}</section>`;
     const rows = [["awayTeam", L.awayTeam.abbrev], ["homeTeam", L.homeTeam.abbrev]].flatMap(([side, ab]) =>
@@ -153,7 +169,7 @@
     return `<section class="blk white gk-blk">${h}<table class="stats gk"><thead><tr><th>Gardien</th><th>Arrêts</th><th>%ARR</th><th>Temps</th></tr></thead><tbody>
       ${rows.map((g) => `<tr class="${g.ab === MTL ? "mtl" : ""}"><td><span class="nm">${esc(loc(g.name))}</span><span class="ps">${esc(g.ab)}${g.decision && DECISION[g.decision] ? ` · ${DECISION[g.decision]}` : ""}</span></td>
         <td>${fin(g.saves) && fin(g.shotsAgainst) ? `${g.saves}/${g.shotsAgainst}` : esc(g.saveShotsAgainst || "—")}</td><td class="pts">${pct(g.savePctg)}</td><td>${esc(g.toi)}</td></tr>`).join("")}
-      </tbody></table></section>`;
+      </tbody></table>${slowNote(L, when)}</section>`;
   }
 
   function stars(L) {
@@ -198,7 +214,7 @@
       app.innerHTML = `<section class="hero">${top()}</section><section class="blk"><div class="err">Aucun match choisi (adresse incomplète). Choisissez un match dans le <a href="calendrier.html">calendrier</a>.</div></section>`;
       return;
     }
-    const d = await loadAll();
+    const d = await loadAll(first);
     const L = d.landing;
     if (!L) {
       failures++;
@@ -214,9 +230,9 @@
       return;
     }
     failures = 0;
-    const parts = [() => hero(L, d.boxscore, d.at), () => goals(L), () => stars(L), () => shots(L, d["right-rail"], d.errors["right-rail"]), () => goalies(L, d.boxscore, d.errors.boxscore), () => penalties(L)];
+    const parts = [() => hero(L, d.boxscore, d.at), () => goals(L), () => stars(L), () => shots(L, d["right-rail"], d.errors["right-rail"], d.slowWhen), () => goalies(L, d.boxscore, d.errors.boxscore, d.slowWhen), () => penalties(L)];
     const y = scrollY;
-    app.innerHTML = parts.map((fn) => { try { return fn(); } catch (e) { console.error(e); return `<div class="blk">${errBox("Section", "erreur d’affichage")}</div>`; } }).join("");
+    app.innerHTML = T.sections(parts, errBox);
     app.dataset.ok = "1";
     if (!first) scrollTo(0, y);
     const away = teamName(L.awayTeam), home = teamName(L.homeTeam);
@@ -230,6 +246,6 @@
     timer = setTimeout(() => { if (document.visibilityState === "visible") render(false); else schedule(true); }, wait);
   }
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && timer) { clearTimeout(timer); render(false); } });
-  document.getElementById("foot").innerHTML = `<p>Données : API publique de la LNH, par le relais Tricolore (Cloudflare). Heures de l’Est.</p><p>Site de partisan non officiel, non affilié à la LNH ni au Club de hockey Canadien.</p>`;
+  document.getElementById("foot").innerHTML = `<p>Données : API publique de la LNH, par le relais Tricolore (Cloudflare). Heures de l’Est.</p>${UNOFFICIAL}`;
   render(true);
 })();

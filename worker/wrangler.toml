@@ -7,3 +7,13 @@ workers_dev = true
 # Lance la tâche « Données LNH » aux 15 minutes (heure UTC), voir scheduled() dans index.js.
 [triggers]
 crons = ["*/15 * * * *"]
+
+# Limiteur de débit (voir fetch() dans index.js) : 300 requêtes par minute par adresse IP.
+# Le compteur est approximatif et propre à chaque centre de données Cloudflare.
+[[ratelimits]]
+name = "LIMITE"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 300
+  period = 60

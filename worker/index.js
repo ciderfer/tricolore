@@ -6,6 +6,9 @@
 // Minuterie (scheduled, voir wrangler.toml) : aux 15 minutes, lance la tâche « Données LNH »
 // sur GitHub (workflow_dispatch), parce que l'horaire de GitHub Actions saute la plupart
 // des exécutions. Seul secret : GH_TOKEN, un jeton limité à ce repo (Actions : écriture).
+// Limiteur de débit (liaison LIMITE, voir wrangler.toml) : au plus 300 requêtes par minute par adresse IP,
+// pour qu'une boucle (l'en-tête Origin se falsifie) n'épuise pas le quota quotidien. Limite généreuse :
+// au Centre Bell, beaucoup de partisans partagent l'adresse IP de leur opérateur.
 
 const UPSTREAM = "https://api-web.nhle.com";
 
@@ -73,11 +76,15 @@ export default {
     if (r.status !== 204) throw new Error(`GitHub : HTTP ${r.status} ${await r.text()}`);
   },
 
-  async fetch(request) {
+  async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
     const okOrigin = ALLOWED_ORIGIN.test(origin) ? origin : null;
     if (!okOrigin) return reply(403, { error: "origine non permise" }, null);
     if (request.method !== "GET") return reply(405, { error: "GET seulement" }, okOrigin, { allow: "GET" });
+    if (env.LIMITE) {
+      const { success } = await env.LIMITE.limit({ key: request.headers.get("cf-connecting-ip") || "inconnue" });
+      if (!success) return reply(429, { error: "trop de requêtes, réessayez dans une minute" }, okOrigin, { "retry-after": "60", "cache-control": "no-store" });
+    }
 
     const { pathname } = new URL(request.url);
     const route = ROUTES.find(([re]) => re.test(pathname));

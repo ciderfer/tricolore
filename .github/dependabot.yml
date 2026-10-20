@@ -1,0 +1,7 @@
+# Garde à jour les actions GitHub fixées par SHA (le commentaire # vX.Y.Z est mis à jour aussi).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

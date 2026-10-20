@@ -18,11 +18,13 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 | Fichier | Rôle |
 | --- | --- |
 | `index.html`, `styles.css`, `app.js` | La page d’accueil |
+| `commun.js` | Fonctions communes aux 5 pages (échappement, dates, chargement de `data/` avec `meta.json`, pied de page), chargé avant le script de chaque page |
 | `scripts/fetch-data.mjs` | Récupère les données (Node 20, sans dépendance) |
 | `scripts/news.mjs` | Sources de nouvelles et filtre « Canadien » |
 | `data/` | `schedule.json`, `scoreboard.json`, `standings.json`, `news.json`, `meta.json` |
 | `.github/workflows/data.yml` | Mise à jour des données aux 15 minutes (et sur demande) |
-| `.github/workflows/pages.yml` | Déploiement sur GitHub Pages depuis `main` |
+| `.github/workflows/pages.yml` | Déploiement sur GitHub Pages depuis `main`. Ajoute `?v=<empreinte>` aux JS et CSS dans le HTML (empreinte du contenu du code) pour que les navigateurs ne gardent pas un ancien fichier après un déploiement |
+| `.github/dependabot.yml` | Mises à jour hebdomadaires des actions GitHub, fixées par SHA dans les workflows |
 | `worker/` | Proxy Cloudflare pour le pointage en direct, et minuterie qui lance la tâche de données aux 15 minutes (secret `GH_TOKEN` : jeton GitHub limité à ce repo, permission Actions en écriture) |
 
 ## En local
@@ -38,7 +40,7 @@ python3 -m http.server 8000
 Page `match.html?id=<identifiant LNH du match>` (script `match.js`). On y arrive depuis l’accueil (derniers résultats, carte du match en direct ou terminé) et depuis le calendrier (matchs joués ou en cours).
 
 - Données : `gamecenter/<id>/landing` (pointage, période, buts, trois étoiles, pénalités), `boxscore` (gardiens, issue du match) et `right-rail` (tirs par période, statistiques d’équipe), lues par le Worker.
-- En direct : mise à jour aux 15 secondes quand l’onglet est visible.
+- En direct, quand l’onglet est visible : pointage, buts et pénalités (`landing`) aux 15 secondes; gardiens, tirs et statistiques (`boxscore`, `right-rail`) chaque minute, pour ménager le quota du Worker. La page l’indique sous ces sections, avec l’heure de la dernière lecture. Quand le match n’est plus en direct (fin du match), tout est relu une dernière fois.
 - Si le Worker ne répond pas : le pointage du calendrier du site s’affiche, avec un message clair. Les buts, tirs et autres détails ne s’affichent pas.
 - Aucune photo.
 
@@ -82,21 +84,24 @@ Page `joueur.html?id=NUMÉRO` (script `joueur.js`). Chaque nom de l’alignement
 - `manifest.webmanifest` : nom « Tricolore », `display: standalone`, `start_url` et `scope` `/tricolore/`.
 - Sur iPhone : Safari → Partager → « Sur l’écran d’accueil ». Barre d’état translucide au-dessus de la bande bleue.
 - Aucun service worker : la page lit toujours les données fraîches.
+- Politique de sécurité du contenu (balise `Content-Security-Policy` dans chaque page) : scripts, styles et polices du site seulement, connexions au site et au Worker (et à `localhost` pour les tests). Aucun style ni script en ligne.
 
 ## Worker Cloudflare (pointage en direct)
 
 - Adresse : `https://tricolore.tricolore.workers.dev` (constante `WORKER_DEFAULT` dans `app.js`).
-- Requêtes GET seulement, depuis `https://ciderfer.github.io` ou `localhost`. Chemins permis : `scoreboard/MTL/now`, `score/now` (cache 5 s), `gamecenter/<id>/landing|boxscore|right-rail` (matchs du Canadien seulement, vérifié avec `landing` ; cache 5 s en direct, 2 min si final non officiel, 1 h si officiel), `club-schedule-season/MTL/now`, `standings/now` (cache 60 s). Aucun secret.
-- Déploiement manuel, depuis le dossier `worker/` (Node 22+, compte Cloudflare connecté) :
+- Requêtes GET seulement, depuis `https://ciderfer.github.io` ou `localhost`. Au plus 300 requêtes par minute par adresse IP (liaison `LIMITE` de `wrangler.toml`), sinon réponse 429. Chemins permis : `scoreboard/MTL/now`, `score/now` (cache 5 s), `gamecenter/<id>/landing|boxscore|right-rail` (matchs du Canadien seulement, vérifié avec `landing` ; cache 5 s en direct, 2 min si final non officiel, 1 h si officiel), `club-schedule-season/MTL/now`, `standings/now` (cache 60 s). Aucun secret.
+- Déploiement manuel, depuis le dossier `worker/` (Node 22+, compte Cloudflare connecté). La version de wrangler est fixée dans `worker/package.json` :
 
 ```sh
 cd worker
+npm ci                 # installe la version fixée de wrangler
 npx wrangler login     # une seule fois
-npx wrangler deploy
+npm run deploy
 ```
 
 - Le Worker n’est pas déployé par GitHub Actions pour l’instant (pas de jeton d’API).
-- Test local : `npx wrangler dev --port 8787` dans `worker/`, puis ouvrir le site avec `?worker=http://localhost:8787`.
+- Test local : `npm run dev` dans `worker/`, puis ouvrir le site avec `?worker=http://localhost:8787`.
+- Jeton `GH_TOKEN` : expire le **À COMPLÉTER (AAAA-MM-JJ)**. À renouveler avant cette date (GitHub › Settings › Developer settings › Fine-grained tokens), puis `npx wrangler secret put GH_TOKEN` dans `worker/`. S’il expire, la minuterie échoue sans avertissement; l’horaire GitHub (:08 et :38) prend le relais, moins fiable.
 
 ## Nouvelles
 

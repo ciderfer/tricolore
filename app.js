@@ -3,70 +3,33 @@
 // Règle d'or : aucune donnée inventée. Si une source manque, on affiche un message clair.
 (function () {
   "use strict";
-  const TZ = "America/Toronto";
-  const MTL = "MTL";
-  const LIVE = new Set(["LIVE", "CRIT"]);
-  const DONE = new Set(["OFF", "FINAL"]);
-
-  const loc = (o) => (o ? o.fr || o.default : "");
-  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const F = (o) => new Intl.DateTimeFormat("fr-CA", { timeZone: TZ, ...o });
+  const { MTL, LIVE, DONE, esc, loc, cap, num, F, fStamp, pct, tvOf, WORKER, POLL_MS, WORDMARK, errBox } = T;
   const fWeekday = F({ weekday: "long" }), fDay = F({ day: "numeric" }), fMonth = F({ month: "long" });
   const fShort = F({ day: "numeric", month: "short" }), fShortWd = F({ weekday: "short" });
   const fH = F({ hour: "numeric", hourCycle: "h23" }), fM = F({ minute: "2-digit" });
-  const fStamp = F({ dateStyle: "long", timeStyle: "short" }), fClock = F({ hour: "numeric", minute: "2-digit" });
+  const fClock = F({ hour: "numeric", minute: "2-digit" });
   // fr-CA donne « 19 h » : on ne garde que les chiffres (correctif du « 19 h h 00 »).
   const hourOf = (d) => fH.format(d).replace(/\D/g, "");
   const minOf = (d) => fM.format(d).padStart(2, "0");
 
-  // Proxy Cloudflare (worker/) pour le pointage en direct. En local, ?worker=http://localhost:8787 permet de tester.
-  const WORKER_DEFAULT = "https://tricolore.tricolore.workers.dev";
-  const WORKER = (() => {
-    const q = new URLSearchParams(location.search).get("worker");
-    return q && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(q) ? q : WORKER_DEFAULT;
-  })();
-  const POLL_MS = 15_000;
   const STALE_MS = 90 * 60 * 1000; // la vérification des données a lieu au moins aux 45 min
 
   const SOURCE_LABEL = { schedule: "Calendrier", scoreboard: "Match en cours", standings: "Classement" };
-  const errBox = (what, detail) =>
-    `<div class="err">${esc(what)} : source LNH indisponible${detail ? ` (${esc(detail)})` : ""}. Aucune donnée affichée plutôt qu’une donnée inexacte.</div>`;
-
-  async function getJson(name) {
-    const r = await fetch(`data/${name}.json`, { cache: "no-cache" });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
-  }
-
-  async function load() {
-    const out = { errors: {}, meta: null };
-    try { out.meta = await getJson("meta"); } catch (e) { out.errors.meta = e.message; }
-    await Promise.all(Object.keys(SOURCE_LABEL).map(async (n) => {
-      const s = out.meta?.sources?.[n];
-      if (s && s.ok === false) { out.errors[n] = s.error || "échec"; out[n] = null; return; } // pas de données périmées
-      try { out[n] = await getJson(n); } catch (e) { out.errors[n] = e.message; out[n] = null; }
-    }));
-    try { out.news = await getJson("news"); } catch (e) { out.news = null; out.errors.news = e.message; }
-    return out;
-  }
 
   function team(t, byAbbr) {
     const s = byAbbr?.[t.abbrev];
     return { abbr: t.abbrev, name: loc(t.commonName), place: loc(t.placeName), full: s ? loc(s.teamName) : loc(t.commonName), score: t.score };
   }
-  const tvOf = (g) => [...new Set((g.tvBroadcasts || []).filter((b) => b.countryCode === "CA").map((b) => b.network))]
-    .sort((a, b) => (/RDS|TVA/.test(b) ? 1 : 0) - (/RDS|TVA/.test(a) ? 1 : 0));
   const chips = (tv) => tv.length ? tv.map((t) => `<span class="chip">${esc(t)}</span>`).join("") : `<span>Télé non annoncée</span>`;
 
   let seasonText = "";
-  const top = () => `<div class="top"><div class="wordmark">Tri<i></i>co<i></i>lore</div><div class="lbl">${esc(seasonText)}</div></div>`;
+  const top = () => `<div class="top"><h1 class="wordmark" aria-label="Tricolore">${WORDMARK}</h1><div class="lbl">${esc(seasonText)}</div></div>`;
 
   function hero(d, byAbbr) {
     const sbGames = (d.scoreboard?.gamesByDate || []).flatMap((x) => x.games);
     const live = sbGames.find((g) => LIVE.has(g.gameState));
     if (live) return liveHero(live, d.meta?.updatedAt ? new Date(d.meta.updatedAt) : null, "static");
-    if (!d.schedule) return `<section class="hero">${top()}<div style="margin:30px 18px 0">${errBox("Calendrier", d.errors.schedule)}</div></section>`;
+    if (!d.schedule) return `<section class="hero">${top()}<div class="hero-err">${errBox("Calendrier", d.errors.schedule)}</div></section>`;
     const g = d.schedule.games
       .filter((x) => !DONE.has(x.gameState) && new Date(x.startTimeUTC).getTime() > Date.now() - 4 * 3600e3)
       .sort((a, b) => a.startTimeUTC.localeCompare(b.startTimeUTC))[0];
@@ -84,7 +47,7 @@
         return `<div class="datebig ${size}"><span class="day num">${esc(fDay.format(dt))}</span>
         <div class="side"><div class="wd cond">${esc(wd)}</div><div class="mo cond">${esc(mo)}</div></div></div>`;
       })()}
-      <div class="opp"><div><span class="vs">${home ? "Contre les" : "Chez les"}</span><span class="name cond">${esc(opp.name)}</span><span class="place">de ${esc(opp.place)}</span></div></div>
+      <div class="opp"><div><span class="vs">${home ? "Contre les" : "Chez les"}</span><span class="name cond${Math.max(...opp.name.split(/\s+/).map((w) => w.length)) >= 9 ? " long" : ""}">${esc(opp.name)}</span><span class="place">de ${esc(opp.place)}</span></div></div>
       <div class="time"><span class="num">${tbd ? "À CONFIRMER" : `${hourOf(dt)}<span class="hh">h</span>${minOf(dt)}`}</span><small>Heure<br>de l’Est</small></div>
       <div class="meta"><span class="chip w">${esc(loc(g.venue))}</span>${chips(tvOf(g))}</div>${faceAFace(d, g, home, opp, byAbbr)}</section>`;
   }
@@ -182,7 +145,7 @@
     const asOf = new Intl.DateTimeFormat("fr-CA", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(me.date + "T12:00:00Z"));
     return `<section class="blk white">${h}<table>
       <thead><tr><th>#</th><th>Équipe</th><th>PJ</th><th>V</th><th>D</th><th>DP</th><th>PTS</th></tr></thead><tbody>
-      ${div.map((t) => `<tr class="${t.teamAbbrev.default === MTL ? "mtl" : ""}"><td>${t.divisionSequence}</td><td>${esc(loc(t.teamCommonName))}</td><td>${t.gamesPlayed}</td><td>${t.wins}</td><td>${t.losses}</td><td>${t.otLosses}</td><td class="pts">${t.points}</td></tr>`).join("")}
+      ${div.map((t) => `<tr class="${t.teamAbbrev.default === MTL ? "mtl" : ""}"><td>${num(t.divisionSequence)}</td><td>${esc(loc(t.teamCommonName))}</td><td>${num(t.gamesPlayed)}</td><td>${num(t.wins)}</td><td>${num(t.losses)}</td><td>${num(t.otLosses)}</td><td class="pts">${num(t.points)}</td></tr>`).join("")}
       </tbody></table><p class="asof">Classement au ${esc(asOf)}</p></section>`;
   }
 
@@ -219,12 +182,7 @@
   function footer(d) {
     const failed = Object.keys(SOURCE_LABEL).filter((n) => d.errors[n]).map((n) => SOURCE_LABEL[n])
       .concat(Object.values(d.meta?.news || {}).filter((s) => !s.ok).map((s) => `Nouvelles (${s.name})`));
-    const when = d.meta?.updatedAt ? fStamp.format(new Date(d.meta.updatedAt)) : null;
-    const checked = d.meta?.checkedAt ? fStamp.format(new Date(d.meta.checkedAt)) : null;
-    return `<p>Données : API publique de la LNH${when ? ` · dernière modification le ${esc(when)}` : ""}${checked ? `, vérifiées le ${esc(checked)}` : ""}${when || checked ? " (heure de l’Est)" : ""}.</p>
-      ${d.errors.meta ? `<p class="foot-warn">Heure de mise à jour inconnue (meta.json : ${esc(d.errors.meta)}).</p>` : ""}
-      ${failed.length ? `<p class="foot-warn">Source en échec : ${esc(failed.join(", "))}.</p>` : ""}
-      <p>Site de partisan non officiel, non affilié à la LNH ni au Club de hockey Canadien.</p>`;
+    return T.footer(d.meta, d.errors.meta, failed);
   }
 
   // Course aux séries (format LNH : 3 premiers de chaque division + 2 équipes repêchées par association).
@@ -239,8 +197,6 @@
       return `<section class="blk white series">${h}${errBox("Course aux séries", "rangs des équipes repêchées absents du classement LNH")}</section>`;
     const name = (t) => loc(t.teamCommonName) || t.teamAbbrev.default;
     const ord = (n, fem) => (n === 1 ? (fem ? "1<sup>re</sup>" : "1<sup>er</sup>") : `${n}<sup>e</sup>`);
-    const pctF = new Intl.NumberFormat("fr-CA", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
-    const pct = (t) => (Number.isFinite(t.pointPctg) ? pctF.format(t.pointPctg).replace(/^0(?=,)/, "") : "—");
     const divName = me.divisionAbbrev === "A" ? "Atlantique" : me.divisionAbbrev === "M" ? "Métropolitaine" : me.divisionAbbrev === "C" ? "Centrale" : "Pacifique";
     const confName = me.conferenceAbbrev === "E" ? "l’Est" : "l’Ouest";
     const wc = conf.filter((t) => t.wildcardSequence > 0).sort((a, b) => a.wildcardSequence - b.wildcardSequence);
@@ -258,10 +214,10 @@
       const gpTxt = gpDiff > 0 ? `le CH a ${gpDiff} match${gpDiff > 1 ? "s" : ""} en main` : gpDiff < 0 ? `le CH a joué ${-gpDiff} match${gpDiff < -1 ? "s" : ""} de plus` : "même nombre de matchs";
       const head = ahead ? (gap > 0 ? `${pts(gap)} d’avance` : gap === 0 ? "À égalité" : `${pts(-gap)} de retard`)
         : (gap > 0 ? `À ${pts(gap)}` : gap === 0 ? "À égalité" : `${pts(-gap)} d’avance`);
-      const vs = gap === 0 ? "avec les" : ahead ? (gap > 0 ? "sur les" : "sur les") : (gap > 0 ? "des" : "sur les");
+      const vs = gap === 0 ? "avec les" : !ahead && gap > 0 ? "des" : "sur les";
       return `<div class="sr-line"><div class="sr-lbl lbl">${label}</div>
-        <div class="sr-main"><b>${head}</b> ${vs} ${esc(name(other))} <span class="sr-gp">(${other.points} pts en ${other.gamesPlayed} PJ, ${pct(other)})</span></div>
-        <div class="sr-gp">CH : ${me.points} pts en ${me.gamesPlayed} PJ, ${pct(me)} · ${gpTxt}</div></div>`;
+        <div class="sr-main"><b>${head}</b> ${vs} ${esc(name(other))} <span class="sr-gp">(${other.points} pts en ${other.gamesPlayed} PJ, ${pct(other.pointPctg)})</span></div>
+        <div class="sr-gp">CH : ${me.points} pts en ${me.gamesPlayed} PJ, ${pct(me.pointPctg)} · ${gpTxt}</div></div>`;
     };
     const lines = inside
       ? cmp("Coussin sur la 1<sup>re</sup> équipe exclue", firstOut, true)
@@ -271,7 +227,7 @@
       const isMe = t.teamAbbrev.default === MTL;
       const gap = wc2 ? t.points - wc2.points : null;
       const rank = t.wildcardSequence <= 2 ? `${ord(t.wildcardSequence, true)}` : `${t.wildcardSequence}`;
-      return `<tr class="${isMe ? "mtl" : ""}${t.wildcardSequence === 2 ? " cutline" : ""}"><td>${rank}</td><td>${esc(name(t))}</td><td>${t.gamesPlayed}</td><td class="pts">${t.points}</td><td>${pct(t)}</td><td>${t.wildcardSequence <= 2 ? "—" : gap === null ? "—" : gap === 0 ? "0" : `−${-gap}`}</td></tr>`;
+      return `<tr class="${isMe ? "mtl" : ""}${t.wildcardSequence === 2 ? " cutline" : ""}"><td>${rank}</td><td>${esc(name(t))}</td><td>${t.gamesPlayed}</td><td class="pts">${t.points}</td><td>${pct(t.pointPctg)}</td><td>${t.wildcardSequence <= 2 ? "—" : gap === null ? "—" : gap === 0 ? "0" : `−${-gap}`}</td></tr>`;
     }).join("");
     const asOf = new Intl.DateTimeFormat("fr-CA", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(me.date + "T12:00:00Z"));
     return `<section class="blk white series">${h}
@@ -284,19 +240,16 @@
       Rangs 1 et 2 (sur fond blanc) : les 2 équipes repêchées. Écart : points de retard sur la 2<sup>e</sup> équipe repêchée. %PTS : points obtenus sur points possibles.</p></section>`;
   }
 
-  load().then((d) => {
+  T.load([...Object.keys(SOURCE_LABEL), "news"]).then((d) => {
     const all = d.standings?.standings || [];
     const byAbbr = Object.fromEntries(all.map((t) => [t.teamAbbrev.default, t]));
     const me = byAbbr[MTL];
-    const season = String(d.schedule?.currentSeason || me?.seasonId || "");
-    if (/^\d{8}$/.test(season)) seasonText = `Saison ${season.slice(0, 4)}-${season.slice(4)}`;
+    seasonText = T.season(d.schedule?.currentSeason || me?.seasonId);
     const parts = [
       () => `<div id="hero-slot">${hero(d, byAbbr)}</div>`, () => staleBanner(d), () => band(d, me), () => results(d), () => sleeve,
       () => standings(d, me, all), () => series(d, me, all), () => sleeve, () => news(d),
     ];
-    document.getElementById("app").innerHTML = parts.map((fn) => {
-      try { return fn(); } catch (e) { console.error(e); return `<div class="blk">${errBox("Section", "erreur d’affichage")}</div>`; }
-    }).join("");
+    document.getElementById("app").innerHTML = T.sections(parts);
     document.getElementById("foot").innerHTML = footer(d);
     startLive(d);
   });
@@ -322,7 +275,9 @@
   }
 
   function startLive(d) {
-    let timer = null, stopped = false, failures = 0, lastGood = null;
+    // busy : une requête est en cours. Sans ce drapeau, revenir sur l'onglet pendant une requête
+    // lançait une deuxième boucle de mises à jour (puis une troisième, etc.).
+    let timer = null, busy = false, stopped = false, failures = 0, lastGood = null;
     const slot = () => document.getElementById("hero-slot");
 
     async function tick() {
@@ -330,8 +285,9 @@
       if (stopped || document.hidden) return;
       const g = liveCandidate(d);
       if (!g) { timer = setTimeout(tick, 60_000); return; } // rien à suivre : on revérifie chaque minute, sans réseau
+      busy = true;
       try {
-        const r = await fetch(`${WORKER}/v1/gamecenter/${encodeURIComponent(g.id)}/landing`, { cache: "no-store" });
+        const r = await fetch(`${WORKER}/v1/gamecenter/${encodeURIComponent(g.id)}/landing`, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const live = await r.json();
         const asOf = new Date(Date.parse(r.headers.get("x-tricolore-fetched-at") || "") || Date.now());
@@ -343,19 +299,22 @@
         console.warn("Pointage en direct indisponible :", e.message);
         const metaTime = d.meta?.updatedAt ? fStamp.format(new Date(d.meta.updatedAt)) : "heure inconnue";
         const note = `Pointage en direct indisponible. Affichage des données du site en date du ${metaTime} (heure de l’Est).`;
-        if (lastGood && LIVE.has(lastGood.live.gameState)) slot().innerHTML = liveHero(lastGood.live, lastGood.asOf, "worker", note);
-        else {
+        if (lastGood && LIVE.has(lastGood.live.gameState)) {
+          const staleNote = `Pointage en direct indisponible. Dernier pointage reçu à ${fClock.format(lastGood.asOf)} (heure de l’Est).`;
+          slot().innerHTML = liveHero(lastGood.live, lastGood.asOf, "worker", staleNote);
+        } else {
           slot().innerHTML = hero(d, Object.fromEntries((d.standings?.standings || []).map((t) => [t.teamAbbrev.default, t])));
           const st = slot().querySelector(".hero");
           if (st) st.insertAdjacentHTML("beforeend", `<p class="warn-note hero-note">${esc(note)}</p>`);
         }
-      }
+      } finally { busy = false; }
+      if (stopped || document.hidden) return; // onglet caché pendant la requête : visibilitychange relancera au retour
       timer = setTimeout(tick, failures ? Math.min(POLL_MS * 2 ** failures, 120_000) : POLL_MS);
     }
 
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) { clearTimeout(timer); timer = null; }
-      else if (!timer && !stopped) tick();
+      else if (!timer && !busy && !stopped) tick();
     });
     tick();
   }

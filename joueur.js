@@ -3,19 +3,9 @@
 // de la LNH pour chaque joueur de l'alignement actuel. Aucune photo. Règle d'or : aucune donnée inventée.
 (function () {
   "use strict";
-  const TZ = "America/Toronto";
-  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const loc = (o) => (o ? o.fr || o.default : "");
-  const fin = (n) => typeof n === "number" && Number.isFinite(n);
-  const n = (v) => (fin(v) ? String(v) : "—");
-  const F = (o) => new Intl.DateTimeFormat("fr-CA", { timeZone: TZ, ...o });
-  const fStamp = F({ dateStyle: "long", timeStyle: "short" });
+  const { esc, loc, fin, num: n, pct, gaa, signed, age, WORDMARK, getJson } = T;
+  const errBox = (what, detail) => T.errBox(what, detail, false);
   const fGameDay = new Intl.DateTimeFormat("fr-CA", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" });
-  const fPct = new Intl.NumberFormat("fr-CA", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
-  const fGaa = new Intl.NumberFormat("fr-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const pct = (v) => (fin(v) ? fPct.format(v).replace(/^0(?=,)/, "") : "—");
-  const gaa = (v) => (fin(v) ? fGaa.format(v) : "—");
-  const signed = (v) => (!fin(v) ? "—" : v > 0 ? `+${v}` : v < 0 ? `−${-v}` : "0");
   const ID = new URLSearchParams(location.search).get("id") || "";
 
   const POS = { C: "Centre", L: "Ailier gauche", R: "Ailier droit", D: "Défenseur", G: "Gardien" };
@@ -23,20 +13,7 @@
     DEU: "Allemagne", GER: "Allemagne", CHE: "Suisse", SUI: "Suisse", LVA: "Lettonie", LAT: "Lettonie", DNK: "Danemark", DEN: "Danemark",
     NOR: "Norvège", AUT: "Autriche", FRA: "France", SVN: "Slovénie", BLR: "Bélarus", KAZ: "Kazakhstan", UKR: "Ukraine", GBR: "Royaume-Uni",
     AUS: "Australie", NLD: "Pays-Bas", ITA: "Italie", POL: "Pologne", HUN: "Hongrie", JPN: "Japon", KOR: "Corée du Sud" };
-  const errBox = (what, detail) =>
-    `<div class="err">${esc(what)} : source indisponible${detail ? ` (${esc(detail)})` : ""}. Aucune donnée affichée plutôt qu’une donnée inexacte.</div>`;
-  const top = () => `<div class="top"><div class="wordmark">Tri<i></i>co<i></i>lore</div><div class="lbl"><a class="back" href="alignement.html">‹ Alignement</a></div></div>`;
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date());
-  function age(birth) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(birth || "")) return null;
-    const [y, m, d] = birth.split("-").map(Number), [ty, tm, td] = today.split("-").map(Number);
-    return ty - y - (tm < m || (tm === m && td < d) ? 1 : 0);
-  }
-  async function getJson(path) {
-    const r = await fetch(path, { cache: "no-cache" });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
-  }
+  const top = () => `<div class="top"><div class="wordmark">${WORDMARK}</div><div class="lbl"><a class="back" href="alignement.html">‹ Alignement</a></div></div>`;
 
   function hero(p) {
     const g = p.position === "G";
@@ -110,12 +87,12 @@
 
   async function main() {
     const app = document.getElementById("app");
+    // La fiche du joueur part en même temps que meta.json (un seul aller-retour réseau).
+    const playerP = /^\d{7}$/.test(ID) ? getJson(`data/joueurs/${ID}.json`) : null;
+    playerP?.catch(() => {}); // erreur traitée plus bas; évite un rejet non géré si on sort avant
     let meta = null, metaErr = null;
     try { meta = await getJson("data/meta.json"); } catch (e) { metaErr = e.message; }
-    const when = meta?.updatedAt ? fStamp.format(new Date(meta.updatedAt)) : null;
-    document.getElementById("foot").innerHTML = `<p>Données : API publique de la LNH${when ? ` · dernière modification le ${esc(when)} (heure de l’Est)` : ""}.</p>
-      ${metaErr ? `<p class="foot-warn">Heure de mise à jour inconnue (meta.json : ${esc(metaErr)}).</p>` : ""}
-      <p>Site de partisan non officiel, non affilié à la LNH ni au Club de hockey Canadien.</p>`;
+    document.getElementById("foot").innerHTML = T.footer(meta, metaErr);
     if (!/^\d{7}$/.test(ID)) {
       app.innerHTML = `<section class="hero">${top()}</section><section class="blk"><div class="err">Aucun joueur choisi (adresse incomplète). Choisissez un joueur dans l’<a href="alignement.html">alignement</a>.</div></section>`;
       return;
@@ -126,7 +103,7 @@
       return;
     }
     let p;
-    try { p = await getJson(`data/joueurs/${ID}.json`); }
+    try { p = await playerP; }
     catch (e) {
       app.innerHTML = `<section class="hero">${top()}</section><section class="blk">${e.message === "HTTP 404"
         ? `<div class="err">Ce joueur n’est pas dans l’alignement actuel du Canadien (aucune fiche).</div>` : errBox("Fiche du joueur", e.message)}</section>`;
@@ -135,7 +112,7 @@
     if (String(p.playerId) !== ID) { app.innerHTML = `<section class="hero">${top()}</section><section class="blk">${errBox("Fiche du joueur", "fichier inattendu")}</section>`; return; }
     document.title = `${loc(p.firstName)} ${loc(p.lastName)} · Tricolore`;
     const parts = [() => hero(p), () => season(p), () => last5(p), () => `<div class="sleeve" aria-hidden="true"></div>`, () => career(p)];
-    app.innerHTML = parts.map((fn) => { try { return fn(); } catch (e) { console.error(e); return `<div class="blk">${errBox("Section", "erreur d’affichage")}</div>`; } }).join("");
+    app.innerHTML = T.sections(parts, errBox);
   }
   main();
 })();

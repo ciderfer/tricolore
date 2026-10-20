@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; manifest-src 'self'; connect-src 'self' https://tricolore.tricolore.workers.dev http://localhost:* http://127.0.0.1:*; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="theme-color" content="#192168">
 <meta name="description" content="Tricolore : calendrier complet et résultats du Canadien de Montréal. Site de partisan non officiel.">
 <title>Calendrier · Tricolore</title>
@@ -23,7 +24,8 @@
 <nav class="tabs" aria-label="Sections"><a href="./">Match</a><a href="calendrier.html" aria-current="page">Calendrier</a><a href="alignement.html">Alignement</a></nav>
 <main id="app"><p class="loading">Lacer les patins…</p></main>
 <footer id="foot"></footer>
-<noscript><p class="err" style="margin:18px">Ce site a besoin de JavaScript pour afficher le calendrier.</p></noscript>
+<noscript><p class="err noscript-msg">Ce site a besoin de JavaScript pour afficher le calendrier.</p></noscript>
+<script src="commun.js" defer></script>
 <script src="calendrier.js" defer></script>
 </body>
 </html>

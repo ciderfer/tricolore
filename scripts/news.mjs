@@ -60,9 +60,14 @@ function safeUrl(u, host) {
   } catch { return null; }
 }
 
+// Nom de joueur : sans tenir compte des accents (« Slafkovsky » ou « Slafkovský »), et en mot entier.
+// \b ne suffit pas : en JavaScript, une lettre accentuée n'est pas un caractère de mot (« Slafkovský » ne trouvait jamais rien).
+const plain = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const nameRe = (n) => new RegExp(`(?<![\\p{L}\\p{N}])${plain(n).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}\\p{N}])`, "u");
+
 function isAboutHabs(title, hockeyFeed, names) {
   if (TEAM_RE.test(title) && !NOT_TEAM_RE.test(title)) return true;
-  return hockeyFeed && names.some((n) => new RegExp(`\\b${n}\\b`).test(title));
+  return hockeyFeed && names.some((n) => nameRe(n).test(plain(title)));
 }
 
 async function fromSource(src, names) {

@@ -71,10 +71,10 @@ if (sources.schedule?.ok) {
   } catch (err) { console.log(`ÉCHEC calendrier .ics (${err?.message || err})`); }
 }
 
-// Nouvelles : les noms des joueurs actuels aident à filtrer les flux hockey.
+// Nouvelles : les noms des joueurs actuels aident à filtrer les flux hockey (roster.json, déjà lu plus haut).
 let rosterNames = [];
 try {
-  const roster = await (await fetch(BASE + "/roster/MTL/current", { redirect: "follow", signal: AbortSignal.timeout(20_000) })).json();
+  const roster = JSON.parse(await readText("roster.json"));
   rosterNames = ["forwards", "defensemen", "goalies"].flatMap((k) => roster[k] || []).map((p) => p.lastName?.default);
 } catch { /* filtre sur les mots de l'équipe seulement */ }
 const news = await fetchNews(rosterNames);

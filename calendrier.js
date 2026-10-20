@@ -3,40 +3,15 @@
 // Règle d'or : aucune donnée inventée. Si la source manque, on affiche un message clair.
 (function () {
   "use strict";
-  const TZ = "America/Toronto";
-  const MTL = "MTL";
-  const LIVE = new Set(["LIVE", "CRIT"]);
-  const DONE = new Set(["OFF", "FINAL"]);
-  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const loc = (o) => (o ? o.fr || o.default : "");
-  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-  const F = (o) => new Intl.DateTimeFormat("fr-CA", { timeZone: TZ, ...o });
+  const { MTL, LIVE, DONE, esc, loc, cap, F, tvOf, WORDMARK, errBox } = T;
   const fMonthKey = F({ year: "numeric", month: "2-digit" }), fMonthName = F({ month: "long", year: "numeric" });
   const fDay = F({ day: "numeric" }), fWd = F({ weekday: "short" });
   const fH = F({ hour: "numeric", hourCycle: "h23" }), fM = F({ minute: "2-digit" });
-  const fStamp = F({ dateStyle: "long", timeStyle: "short" });
   const clock = (d) => `${fH.format(d).replace(/\D/g, "")}<span class="hh">h</span>${fM.format(d).padStart(2, "0")}`;
 
-  const errBox = (what, detail) =>
-    `<div class="err">${esc(what)} : source LNH indisponible${detail ? ` (${esc(detail)})` : ""}. Aucune donnée affichée plutôt qu’une donnée inexacte.</div>`;
-  async function getJson(name) {
-    const r = await fetch(`data/${name}.json`, { cache: "no-cache" });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
-  }
-  async function load() {
-    const out = { errors: {}, meta: null, schedule: null };
-    try { out.meta = await getJson("meta"); } catch (e) { out.errors.meta = e.message; }
-    const s = out.meta?.sources?.schedule;
-    if (s && s.ok === false) out.errors.schedule = s.error || "échec"; // pas de données périmées
-    else { try { out.schedule = await getJson("schedule"); } catch (e) { out.errors.schedule = e.message; } }
-    return out;
-  }
 
   // Même règle que l'accueil : premier match non terminé, commencé il y a moins de 4 h.
   const isNext = (g) => !DONE.has(g.gameState) && new Date(g.startTimeUTC).getTime() > Date.now() - 4 * 3600e3;
-  const tvOf = (g) => [...new Set((g.tvBroadcasts || []).filter((b) => b.countryCode === "CA").map((b) => b.network))]
-    .sort((a, b) => (/RDS|TVA/.test(b) ? 1 : 0) - (/RDS|TVA/.test(a) ? 1 : 0));
   const STATE_TXT = { PPD: "Reporté", CNCL: "Annulé", SUSP: "Suspendu", TBD: "À confirmer" };
 
   function row(g, next) {
@@ -68,7 +43,7 @@
   }
 
   function body(d) {
-    const h = `<section class="hero page-hero"><div class="top"><div class="wordmark">Tri<i></i>co<i></i>lore</div><div class="lbl">${esc(seasonText(d))}</div></div>
+    const h = `<section class="hero page-hero"><div class="top"><div class="wordmark">${WORDMARK}</div><div class="lbl">${esc(T.season(d.schedule?.currentSeason))}</div></div>
       <h1 class="page-title cond">Calendrier<br><span>${d.schedule ? "Toute la saison" : "&nbsp;"}</span></h1></section>`;
     if (!d.schedule || !Array.isArray(d.schedule.games)) return `${h}<section class="blk">${errBox("Calendrier", d.errors.schedule || "données absentes")}</section>`;
     const games = [...d.schedule.games].filter((g) => g.startTimeUTC).sort((a, b) => a.startTimeUTC.localeCompare(b.startTimeUTC));
@@ -98,24 +73,11 @@
       <p class="ics-note">Abonnement : les matchs de la saison (et des séries) s’ajoutent à votre calendrier et se mettent à jour d’eux-mêmes (heure, télé, pointage final).
       Sinon, <a href="${esc(file.href)}" download="canadiens.ics">télécharger le fichier .ics</a> (sans mise à jour).</p></section>`;
   }
-  function seasonText(d) {
-    const s = String(d.schedule?.currentSeason || "");
-    return /^\d{8}$/.test(s) ? `Saison ${s.slice(0, 4)}-${s.slice(4)}` : "";
-  }
-  function footer(d) {
-    const when = d.meta?.updatedAt ? fStamp.format(new Date(d.meta.updatedAt)) : null;
-    const checked = d.meta?.checkedAt ? fStamp.format(new Date(d.meta.checkedAt)) : null;
-    return `<p>Données : API publique de la LNH${when ? ` · dernière modification le ${esc(when)}` : ""}${checked ? `, vérifiées le ${esc(checked)}` : ""}${when || checked ? " (heure de l’Est)" : ""}.</p>
-      ${d.errors.meta ? `<p class="foot-warn">Heure de mise à jour inconnue (meta.json : ${esc(d.errors.meta)}).</p>` : ""}
-      ${d.errors.schedule ? `<p class="foot-warn">Source en échec : Calendrier.</p>` : ""}
-      <p>Site de partisan non officiel, non affilié à la LNH ni au Club de hockey Canadien.</p>`;
-  }
-
-  load().then((d) => {
+  T.load(["schedule"]).then((d) => {
     let html;
     try { html = body(d); } catch (e) { console.error(e); html = `<div class="blk">${errBox("Calendrier", "erreur d’affichage")}</div>`; }
     document.getElementById("app").innerHTML = html;
-    document.getElementById("foot").innerHTML = footer(d);
+    document.getElementById("foot").innerHTML = T.footer(d.meta, d.errors.meta, d.errors.schedule ? ["Calendrier"] : []);
     const n = document.getElementById("prochain");
     if (n && !location.hash) n.scrollIntoView({ block: "center" });
   });
