@@ -101,7 +101,7 @@ npm run deploy
 
 - Le Worker n’est pas déployé par GitHub Actions pour l’instant (pas de jeton d’API).
 - Test local : `npm run dev` dans `worker/`, puis ouvrir le site avec `?worker=http://localhost:8787`.
-- Jeton `GH_TOKEN` : expire le **À COMPLÉTER (AAAA-MM-JJ)**. À renouveler avant cette date (GitHub › Settings › Developer settings › Fine-grained tokens), puis `npx wrangler secret put GH_TOKEN` dans `worker/`. S’il expire, la minuterie échoue sans avertissement; l’horaire GitHub (:08 et :38) prend le relais, moins fiable.
+- Le `GH_TOKEN` du Worker expire le **dimanche 17 janvier 2027**. Le renouveler avant cette date dans GitHub › Settings › Developer settings › Fine-grained tokens, puis faire `npx wrangler secret put GH_TOKEN` dans `worker/`. S’il expire, la minuterie échoue sans avertissement; l’horaire GitHub (:08 et :38) prend le relais, moins fiable.
 
 ## Nouvelles
 
