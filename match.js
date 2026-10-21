@@ -1,8 +1,9 @@
 // Tricolore — feuille de match (match.html?id=AAAATTNNNN).
 // Données : pages « landing », « boxscore » et « right-rail » du match, via le Worker Cloudflare
-// (worker/). En direct, tant que l'onglet est visible : « landing » (pointage, buts, pénalités) aux 15 s,
-// « boxscore » et « right-rail » (gardiens, tirs, statistiques) chaque minute, pour ménager le quota
-// du relais; la page l'indique. À la fin du match, tout est relu une dernière fois.
+// (worker/). Premier affichage par lecture HTTP; ensuite, en direct, le relais pousse les changements par
+// WebSocket (worker/direct.js) : « landing » (pointage, buts, pénalités) dès qu'il change, « boxscore » et
+// « right-rail » (gardiens, tirs, statistiques) chaque minute; la page l'indique. À la fin du match, tout est
+// envoyé une dernière fois. Si la connexion ne s'ouvre pas : lectures HTTP aux 15 s, comme avant.
 // Si le Worker échoue, on affiche le pointage du calendrier du site (data/schedule.json) s'il existe,
 // avec un message clair. Règle d'or : aucune donnée inventée.
 (function () {
@@ -105,7 +106,7 @@
       <div class="sc num">${fin(t.score) ? t.score : "–"}</div></div>`;
     const dt = new Date(L.startTimeUTC);
     const asOf = at ? hm(new Date(at)) : null;
-    const how = live ? `Pointage, buts et pénalités en direct${asOf ? ` en date de ${esc(asOf)}` : ""} (heure de l’Est), mis à jour aux 15 secondes. Tirs, statistiques et gardiens : chaque minute.` : "";
+    const how = live ? `Pointage, buts et pénalités en direct${asOf ? ` en date de ${esc(asOf)}` : ""} (heure de l’Est), mis à jour automatiquement. Tirs, statistiques et gardiens : chaque minute.` : "";
     return `<section class="hero">${top()}
       <div class="lbl kick ${live ? "live-kick" : ""}">${kick}</div>
       <div class="board">${row(L.awayTeam, "Visiteurs")}${row(L.homeTeam, "Locaux")}</div>
@@ -207,14 +208,17 @@
       <section class="blk">${errBox("Feuille de match", err)}<p class="legend">Pointage tiré du calendrier du site${LIVE.has(g.gameState) ? " (pas de pointage en direct sans la feuille de match)" : ""}. Les buts, tirs, gardiens et pénalités viennent de la feuille de match de la LNH, indisponible pour l’instant.</p></section>`;
   }
 
-  let timer = null, failures = 0;
+  let timer = null, failures = 0, feed = null, noSocket = false, cur = null;
   async function render(first) {
+    if (!/^\d{10}$/.test(ID)) return draw(null, true);
+    draw(await loadAll(first), first);
+  }
+  async function draw(d, first) {
     const app = document.getElementById("app");
-    if (!/^\d{10}$/.test(ID)) {
+    if (!d) {
       app.innerHTML = `<section class="hero">${top()}</section><section class="blk"><div class="err">Aucun match choisi (adresse incomplète). Choisissez un match dans le <a href="calendrier.html">calendrier</a>.</div></section>`;
       return;
     }
-    const d = await loadAll(first);
     const L = d.landing;
     if (!L) {
       failures++;
@@ -222,14 +226,11 @@
       if (first || !app.dataset.ok) {
         app.innerHTML = g ? fallback(g, d.errors.landing)
           : `<section class="hero">${top()}</section><section class="blk">${errBox("Feuille de match", d.errors.landing)}<p class="legend">Match ${esc(ID)} introuvable dans le calendrier du site.</p></section>`;
-      } else {
-        const n = document.querySelector(".state");
-        if (n && !n.querySelector(".warn-note")) n.insertAdjacentHTML("beforeend", `<small class="warn-note">Mise à jour impossible (${esc(d.errors.landing)}). Données affichées : dernière lecture réussie.</small>`);
-      }
+      } else warn(d.errors.landing);
       schedule(g && LIVE.has(g.gameState));
       return;
     }
-    failures = 0;
+    failures = 0; cur = d;
     const parts = [() => hero(L, d.boxscore, d.at), () => goals(L), () => stars(L), () => shots(L, d["right-rail"], d.errors["right-rail"], d.slowWhen), () => goalies(L, d.boxscore, d.errors.boxscore, d.slowWhen), () => penalties(L)];
     const y = scrollY;
     app.innerHTML = T.sections(parts, errBox);
@@ -239,9 +240,25 @@
     document.title = `${away} ${fin(L.awayTeam.score) ? L.awayTeam.score : ""} – ${fin(L.homeTeam.score) ? L.homeTeam.score : ""} ${home} · Tricolore`.replace(/\s+/g, " ");
     schedule(LIVE.has(L.gameState) || L.gameState === "PRE");
   }
+  function warn(why) {
+    const n = document.querySelector(".state");
+    if (n && !n.querySelector(".warn-note")) n.insertAdjacentHTML("beforeend", `<small class="warn-note">Mise à jour impossible (${esc(why)}). Données affichées : dernière lecture réussie.</small>`);
+  }
+  // Message du relais : remplace la partie reçue dans la dernière lecture, puis redessine.
+  function onPush(m) {
+    if (!cur || !["landing", "boxscore", "right-rail"].includes(m.part)) return;
+    if (m.body && m.part !== "right-rail" && String(m.body.id) !== ID) return;
+    const d = { ...cur, errors: { ...cur.errors } };
+    d[m.part] = m.body || null; d.errors[m.part] = m.error;
+    if (m.part === "landing") d.at = m.at;
+    else if (m.body) d.slowWhen = new Date(Date.parse(m.at) || Date.now());
+    if (m.part === "landing" && !m.body) return warn(m.error); // on garde la dernière feuille reçue
+    draw(d, false);
+  }
   function schedule(again) {
     clearTimeout(timer);
-    if (!again) return;
+    if (!again) return; // match fini : le relais envoie tout une dernière fois, puis ferme la connexion
+    if (!noSocket) { feed ??= T.liveSocket(ID, true, onPush, () => { feed = null; noSocket = true; schedule(true); }); return; }
     const wait = failures ? Math.min(POLL_MS * 2 ** failures, 120_000) : POLL_MS;
     timer = setTimeout(() => { if (document.visibilityState === "visible") render(false); else schedule(true); }, wait);
   }

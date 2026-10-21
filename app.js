@@ -97,7 +97,7 @@
     const how = source === "worker" && final
       ? `Pointage final reçu à ${esc(when || "heure inconnue")} (heure de l’Est).`
       : source === "worker"
-      ? `Pointage en direct${when ? ` en date de ${esc(when)}` : ""} (heure de l’Est), mis à jour aux 15 secondes.`
+      ? `Pointage en direct${when ? ` en date de ${esc(when)}` : ""} (heure de l’Est), mis à jour automatiquement.`
       : `Pointage en date de ${esc(when || "heure inconnue")} (heure de l’Est), fichiers du site rafraîchis environ aux 15 minutes.`;
     const extra = p?.periodType === "OT" ? " · Prolongation" : p?.periodType === "SO" ? " · Tirs de barrage" : "";
     // Dernier but : seulement avec le sommaire lu au Worker (les fichiers du site n'en ont pas).
@@ -281,9 +281,9 @@
   function startLive(d) {
     // busy : une requête est en cours. Sans ce drapeau, revenir sur l'onglet pendant une requête
     // lançait une deuxième boucle de mises à jour (puis une troisième, etc.).
-    let timer = null, busy = false, stopped = false, failures = 0, lastGood = null;
+    let timer = null, busy = false, stopped = false, failures = 0, lastGood = null, feed = null, noSocket = false;
     const slot = () => document.getElementById("hero-slot");
-    // Annonce des buts pour VoiceOver : zone persistante (la carte est redessinée aux 15 s), qui ne parle
+    // Annonce des buts pour VoiceOver : zone persistante (la carte est redessinée à chaque mise à jour), qui ne parle
     // que lorsqu'un nouveau but apparaît pendant qu'on regarde, pas au chargement de la page.
     const announcer = document.createElement("p");
     announcer.className = "sr-only";
@@ -291,46 +291,58 @@
     document.getElementById("app").append(announcer);
     let goalKey;
 
+    function good(live, asOf) {
+      failures = 0; lastGood = { live, asOf };
+      const lg = T.lastGoal(live);
+      if (lg?.key) {
+        if (goalKey !== undefined && lg.key !== goalKey) announcer.textContent = lg.text;
+        goalKey = lg.key;
+      } else if (goalKey === undefined && !lg?.pending) goalKey = null; // aucun but encore : le premier sera annoncé
+      if (LIVE.has(live.gameState) || DONE.has(live.gameState)) slot().innerHTML = liveHero(live, asOf, "worker");
+      if (DONE.has(live.gameState)) { stopped = true; feed?.stop(); }
+    }
+    function bad(why) {
+      failures += 1;
+      console.warn("Pointage en direct indisponible :", why);
+      const metaTime = d.meta?.updatedAt ? fStamp.format(new Date(d.meta.updatedAt)) : "heure inconnue";
+      const note = `Pointage en direct indisponible. Affichage des données du site en date du ${metaTime} (heure de l’Est).`;
+      if (lastGood && LIVE.has(lastGood.live.gameState)) {
+        const staleNote = `Pointage en direct indisponible. Dernier pointage reçu à ${fClock.format(lastGood.asOf)} (heure de l’Est).`;
+        slot().innerHTML = liveHero(lastGood.live, lastGood.asOf, "worker", staleNote);
+      } else {
+        slot().innerHTML = hero(d, Object.fromEntries((d.standings?.standings || []).map((t) => [t.teamAbbrev.default, t])));
+        const st = slot().querySelector(".hero");
+        if (st) st.insertAdjacentHTML("beforeend", `<p class="warn-note hero-note">${esc(note)}</p>`);
+      }
+    }
+    const stamp = (s) => new Date(Date.parse(s || "") || Date.now());
+
     async function tick() {
       timer = null;
       if (stopped || document.hidden) return;
       const g = liveCandidate(d);
       if (!g) { timer = setTimeout(tick, 60_000); return; } // rien à suivre : on revérifie chaque minute, sans réseau
+      // D'abord la connexion poussée par le relais; si elle ne s'ouvre pas, lecture aux 15 s comme avant.
+      if (!noSocket) {
+        feed ??= T.liveSocket(g.id, false, (m) => {
+          if (m.part !== "landing" || stopped) return;
+          if (m.body && String(m.body.id) === String(g.id)) good(m.body, stamp(m.at)); else if (m.error) bad(m.error);
+        }, () => { feed = null; noSocket = true; tick(); });
+        return;
+      }
       busy = true;
       try {
         const r = await fetch(`${WORKER}/v1/gamecenter/${encodeURIComponent(g.id)}/landing`, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const live = await r.json();
-        const asOf = new Date(Date.parse(r.headers.get("x-tricolore-fetched-at") || "") || Date.now());
-        failures = 0; lastGood = { live, asOf };
-        const lg = T.lastGoal(live);
-        if (lg?.key) {
-          if (goalKey !== undefined && lg.key !== goalKey) announcer.textContent = lg.text;
-          goalKey = lg.key;
-        } else if (goalKey === undefined && !lg?.pending) goalKey = null; // aucun but encore : le premier sera annoncé
-        if (LIVE.has(live.gameState) || DONE.has(live.gameState)) slot().innerHTML = liveHero(live, asOf, "worker");
-        if (DONE.has(live.gameState)) { stopped = true; return; }
-      } catch (e) {
-        failures += 1;
-        console.warn("Pointage en direct indisponible :", e.message);
-        const metaTime = d.meta?.updatedAt ? fStamp.format(new Date(d.meta.updatedAt)) : "heure inconnue";
-        const note = `Pointage en direct indisponible. Affichage des données du site en date du ${metaTime} (heure de l’Est).`;
-        if (lastGood && LIVE.has(lastGood.live.gameState)) {
-          const staleNote = `Pointage en direct indisponible. Dernier pointage reçu à ${fClock.format(lastGood.asOf)} (heure de l’Est).`;
-          slot().innerHTML = liveHero(lastGood.live, lastGood.asOf, "worker", staleNote);
-        } else {
-          slot().innerHTML = hero(d, Object.fromEntries((d.standings?.standings || []).map((t) => [t.teamAbbrev.default, t])));
-          const st = slot().querySelector(".hero");
-          if (st) st.insertAdjacentHTML("beforeend", `<p class="warn-note hero-note">${esc(note)}</p>`);
-        }
-      } finally { busy = false; }
+        good(await r.json(), stamp(r.headers.get("x-tricolore-fetched-at")));
+      } catch (e) { bad(e.message); } finally { busy = false; }
       if (stopped || document.hidden) return; // onglet caché pendant la requête : visibilitychange relancera au retour
       timer = setTimeout(tick, failures ? Math.min(POLL_MS * 2 ** failures, 120_000) : POLL_MS);
     }
 
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) { clearTimeout(timer); timer = null; }
-      else if (!timer && !busy && !stopped) tick();
+      else if (!timer && !busy && !stopped && !feed) tick();
     });
     tick();
   }
