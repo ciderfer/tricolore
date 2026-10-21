@@ -279,6 +279,11 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
 .stale{background:#fff3c4;color:#5a3d00;font-weight:700;font-size:15px;padding:12px 18px}
 .warn-note{display:block;margin-top:8px;background:var(--white);color:var(--red);font-weight:700;font-size:14px;padding:8px 10px}
 .hero-note{margin:14px 18px 0}
+/* Dernier but (carte en direct de l'accueil) */
+.last-goal{margin:14px 18px 0;font-weight:700;font-size:16px;line-height:1.3}
+.last-goal .lbl{display:block;font-size:11px;letter-spacing:.14em;color:#ffd9dc;margin-bottom:3px}
+/* Texte lu par les lecteurs d'écran seulement */
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .datebig.l .wd,.datebig.l .mo{font-size:min(38px,9.5vw)}
 .datebig.xl .day{font-size:min(150px,37.5vw)}
 .datebig.xl .wd,.datebig.xl .mo{font-size:min(36px,9vw)}

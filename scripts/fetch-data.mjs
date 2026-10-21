@@ -7,7 +7,8 @@
 //   le site n'affiche aucune photo).
 // - data/meta.json : updatedAt (dernière modification des données), checkedAt (dernière
 //   vérification réussie, rafraîchie au moins aux 45 min pour que la page détecte un arrêt)
-//   et état de chaque source.
+//   et état de chaque source. Une source en échec garde l'heure du début de sa panne (since), utilisée
+//   par la surveillance (scripts/surveillance.mjs) pour ne signaler que les pannes qui durent.
 // - Si une source échoue, son ancien fichier est conservé, mais meta.json la marque
 //   en échec : la page affiche alors un message d'erreur au lieu de données périmées.
 // - Si rien n'a changé (données et état des sources) et que checkedAt a moins de 45 min,
@@ -18,6 +19,7 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { fetchNews } from "./news.mjs";
 import { buildIcs, withoutStamps } from "./ics.mjs";
+import { failingSince } from "./etat.mjs";
 
 const BASE = "https://api-web.nhle.com/v1";
 const SOURCES = {
@@ -33,6 +35,7 @@ const readText = (name) => readFile(new URL(name, DIR), "utf8").catch(() => null
 
 await mkdir(DIR, { recursive: true });
 const oldMeta = JSON.parse((await readText("meta.json")) || "null");
+const startedAt = new Date().toISOString();
 const sources = {};
 let changed = false;
 
@@ -54,7 +57,7 @@ for (const [name, path] of Object.entries(SOURCES)) {
     }
     sources[name] = { ok: true, url: res.url };
   } catch (err) {
-    sources[name] = { ok: false, url: BASE + path, error: String(err?.message || err) };
+    sources[name] = { ok: false, url: BASE + path, error: String(err?.message || err), since: failingSince(oldMeta?.sources?.[name], startedAt) };
   }
 }
 

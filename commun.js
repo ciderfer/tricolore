@@ -81,11 +81,48 @@ window.T = (() => {
       ${UNOFFICIAL}`;
   }
 
+  // Dernier but du match, tiré du sommaire de « landing » (texte brut, à échapper avant affichage).
+  // Aucune donnée trompeuse : le sommaire doit compter autant de buts que le pointage. S'il en compte moins
+  // (la LNH publie le pointage avant le détail), on retourne { pending: true } plutôt que d'afficher le but
+  // précédent comme le dernier. Retourne null s'il n'y a aucun but ou si les données ne concordent pas.
+  // Le temps est celui écoulé dans la période (« à 11:45 de la 2e période »), pas le temps qui reste au cadran.
+  const STRENGTH_TXT = { pp: "en avantage numérique", sh: "en désavantage numérique" };
+  const MODIFIER_TXT = { "empty-net": "dans un filet désert", "penalty-shot": "sur un tir de pénalité" };
+  function periodText(pd) {
+    const n = Number(pd?.number);
+    if (!Number.isInteger(n) || n < 1) return "";
+    if (pd.periodType === "OT") { const k = n - (pd.maxRegulationPeriods || 3); return k > 1 ? `${k}e prolongation` : "prolongation"; }
+    return n === 1 ? "1re période" : `${n}e période`;
+  }
+  function lastGoal(L) {
+    const sc = L?.summary?.scoring;
+    const a = L?.awayTeam?.score, h = L?.homeTeam?.score;
+    if (!Array.isArray(sc) || !fin(a) || !fin(h)) return null;
+    const goals = sc.flatMap((p) => (Array.isArray(p.goals) ? p.goals : []).map((g) => ({ g, pd: p.periodDescriptor })));
+    // Après des tirs de barrage, le gagnant reçoit un but de plus au pointage, absent du sommaire.
+    const so = (L.periodDescriptor?.periodType === "SO" || L.gameOutcome?.lastPeriodType === "SO") && a !== h ? 1 : 0;
+    const expected = a + h - so;
+    if (goals.length < expected) return { pending: true };
+    if (goals.length !== expected || !goals.length) return null;
+    const { g, pd } = goals[goals.length - 1];
+    const name = loc(g.lastName) || loc(g.name), per = periodText(pd);
+    if (!name || !per) return null;
+    const abbr = loc(g.teamAbbrev);
+    const team = [L.awayTeam, L.homeTeam].find((t) => t?.abbrev === abbr);
+    const parts = [`But de ${name}${fin(g.goalsToDate) ? ` (${g.goalsToDate})` : ""}`];
+    if (abbr !== MTL) parts.push(loc(team?.commonName) || abbr || "adversaire");
+    const how = MODIFIER_TXT[g.goalModifier] || STRENGTH_TXT[g.strength];
+    if (how) parts.push(how);
+    const t = /^\d{1,2}:\d{2}$/.test(g.timeInPeriod || "") ? g.timeInPeriod.replace(/^0(?=\d:)/, "") : "";
+    parts.push(t ? `à ${t} de la ${per}` : `en ${per}`);
+    return { key: `${g.eventId ?? goals.length}|${a}-${h}`, text: parts.join(", ") };
+  }
+
   // Assemble les sections d'une page : une section qui plante affiche une erreur, les autres s'affichent quand même.
   const sections = (parts, box = errBox) => parts.map((fn) => {
     try { return fn(); } catch (e) { console.error(e); return `<div class="blk">${box("Section", "erreur d’affichage")}</div>`; }
   }).join("");
 
   return { TZ, MTL, LIVE, DONE, esc, loc, fin, cap, num, F, fStamp, pct, gaa, signed, season, age, tvOf,
-    WORKER, POLL_MS, WORDMARK, UNOFFICIAL, errBox, getJson, load, footer, sections };
+    WORKER, POLL_MS, WORDMARK, UNOFFICIAL, errBox, getJson, load, footer, sections, lastGoal };
 })();

@@ -9,6 +9,7 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 - Données : [API publique de la LNH](https://api-web.nhle.com/v1/). Elle n’autorise pas les appels depuis un navigateur (pas d’en-tête CORS). Deux chemins :
   - **Fichiers du site** : une GitHub Action récupère les données aux 15 minutes et les enregistre dans `data/`. Elle est lancée par la minuterie du Worker Cloudflare (l’horaire de GitHub Actions saute la plupart des exécutions et ne sert plus que de filet de sécurité). La page s’affiche tout de suite avec ces fichiers.
   - **Pointage en direct** : quand un match est en cours ou commence dans moins de 30 minutes, la page interroge aux 15 secondes un petit Worker Cloudflare (`worker/`) qui relaie seulement quelques chemins de l’API LNH. Si le Worker ne répond pas, la page revient aux fichiers du site et l’indique.
+  - **Dernier but** (carte du match en direct ou terminé de l’accueil, données du Worker seulement) : par exemple « But de Caufield (5), à 11:45 de la 2e période » (temps écoulé dans la période). Si le pointage compte plus de buts que le sommaire de la LNH, la carte affiche « Détails du but en attente de la LNH » plutôt que le but précédent. Un nouveau but est annoncé aux lecteurs d’écran (zone `aria-live`).
 - Si les fichiers du site n’ont pas été vérifiés depuis plus de 90 minutes, la page affiche un avertissement.
 - Aucune donnée inventée : si une source échoue, la page l’indique clairement au lieu d’afficher autre chose.
 - Polices auto-hébergées : Archivo et Graduate (SIL Open Font License, voir `fonts/`).
@@ -24,6 +25,8 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 | `data/` | `schedule.json`, `scoreboard.json`, `standings.json`, `news.json`, `meta.json` |
 | `.github/workflows/data.yml` | Mise à jour des données aux 15 minutes (et sur demande) |
 | `.github/workflows/pages.yml` | Déploiement sur GitHub Pages depuis `main`. Ajoute `?v=<empreinte>` aux JS et CSS dans le HTML (empreinte du contenu du code) pour que les navigateurs ne gardent pas un ancien fichier après un déploiement |
+| `.github/workflows/surveillance.yml`, `scripts/surveillance.mjs`, `scripts/etat.mjs` | Surveillance des données : ouvre une issue GitHub (donc un courriel) si le site n’a pas vérifié ses données depuis 90 min ou si une source de la LNH est en échec depuis plus de 2 h, et la ferme au retour à la normale. Voir « Surveillance » plus bas |
+| `tests/` | Tests de la logique pure (surveillance, dernier but) : `node --test tests/*.test.mjs` |
 | `.github/dependabot.yml` | Mises à jour hebdomadaires des actions GitHub, fixées par SHA dans les workflows |
 | `worker/` | Proxy Cloudflare pour le pointage en direct, et minuterie qui lance la tâche de données aux 15 minutes (secret `GH_TOKEN` : jeton GitHub limité à ce repo, permission Actions en écriture) |
 
@@ -34,6 +37,14 @@ node scripts/fetch-data.mjs
 python3 -m http.server 8000
 # puis ouvrir http://localhost:8000
 ```
+
+## Surveillance
+
+- `.github/workflows/surveillance.yml` lit `data/meta.json` sur le site publié (horaire de GitHub aux :23 et :53, et sur demande).
+- Problème si : `checkedAt` a plus de 90 min, une source de la LNH (`sources.*`) est en échec depuis plus de 2 h (champ `since`, noté par `fetch-data.mjs` au début de la panne), ou `meta.json` est illisible après 3 essais.
+- Une seule issue « Tricolore : données en panne » à la fois, qui mentionne @ciderfer. Tant que le problème dure, son texte est mis à jour sans nouveau courriel. Au retour à la normale, un commentaire est ajouté et l’issue est fermée.
+- Les sources de nouvelles ne sont pas surveillées (un flux RSS en panne n’empêche pas le site de fonctionner).
+- Essai en local, sans toucher aux issues : `node scripts/surveillance.mjs` (sans `GITHUB_TOKEN`, le script affiche seulement son diagnostic).
 
 ## Feuille de match
 

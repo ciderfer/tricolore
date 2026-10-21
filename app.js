@@ -100,10 +100,14 @@
       ? `Pointage en direct${when ? ` en date de ${esc(when)}` : ""} (heure de l’Est), mis à jour aux 15 secondes.`
       : `Pointage en date de ${esc(when || "heure inconnue")} (heure de l’Est), fichiers du site rafraîchis environ aux 15 minutes.`;
     const extra = p?.periodType === "OT" ? " · Prolongation" : p?.periodType === "SO" ? " · Tirs de barrage" : "";
+    // Dernier but : seulement avec le sommaire lu au Worker (les fichiers du site n'en ont pas).
+    const lg = source === "worker" ? T.lastGoal(g) : null;
+    const goal = lg?.text ? `<p class="last-goal"><span class="lbl">Dernier but</span>${esc(lg.text)}</p>`
+      : lg?.pending ? `<p class="last-goal"><span class="lbl">Dernier but</span>Détails du but en attente de la LNH.</p>` : "";
     return `<section class="hero">${top()}
       <div class="lbl kick ${final ? "" : "live-kick"}">${final ? `Match terminé${extra}` : `En direct · ${period}`}</div>
       <div class="board">${row(g.awayTeam, "Visiteurs")}${row(g.homeTeam, "Locaux")}</div>
-      <div class="state">${final ? "Final" : clock}<small>${how}</small>${note ? `<small class="warn-note">${esc(note)}</small>` : ""}</div>
+      <div class="state">${final ? "Final" : clock}<small>${how}</small>${note ? `<small class="warn-note">${esc(note)}</small>` : ""}</div>${goal}
       <div class="meta"><span class="chip w">${esc(loc(g.venue))}</span>${chips(tvOf(g))}</div>${/^\d{10}$/.test(String(g.id)) ? `<a class="more hero-more" href="match.html?id=${encodeURIComponent(g.id)}">Feuille de match ›</a>` : ""}</section>`;
   }
 
@@ -279,6 +283,13 @@
     // lançait une deuxième boucle de mises à jour (puis une troisième, etc.).
     let timer = null, busy = false, stopped = false, failures = 0, lastGood = null;
     const slot = () => document.getElementById("hero-slot");
+    // Annonce des buts pour VoiceOver : zone persistante (la carte est redessinée aux 15 s), qui ne parle
+    // que lorsqu'un nouveau but apparaît pendant qu'on regarde, pas au chargement de la page.
+    const announcer = document.createElement("p");
+    announcer.className = "sr-only";
+    announcer.setAttribute("aria-live", "polite");
+    document.getElementById("app").append(announcer);
+    let goalKey;
 
     async function tick() {
       timer = null;
@@ -292,6 +303,11 @@
         const live = await r.json();
         const asOf = new Date(Date.parse(r.headers.get("x-tricolore-fetched-at") || "") || Date.now());
         failures = 0; lastGood = { live, asOf };
+        const lg = T.lastGoal(live);
+        if (lg?.key) {
+          if (goalKey !== undefined && lg.key !== goalKey) announcer.textContent = lg.text;
+          goalKey = lg.key;
+        } else if (goalKey === undefined && !lg?.pending) goalKey = null; // aucun but encore : le premier sera annoncé
         if (LIVE.has(live.gameState) || DONE.has(live.gameState)) slot().innerHTML = liveHero(live, asOf, "worker");
         if (DONE.has(live.gameState)) { stopped = true; return; }
       } catch (e) {

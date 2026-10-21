@@ -1,0 +1,37 @@
+name: Surveillance des données
+
+# Lit data/meta.json sur le site publié et ouvre une issue GitHub (donc un courriel) si les données
+# ne sont plus vérifiées depuis 90 min ou si une source de la LNH est en échec depuis plus de 2 h.
+# Une seule issue à la fois; elle se ferme d'elle-même au retour à la normale. Voir scripts/surveillance.mjs.
+# L'horaire de GitHub saute souvent des exécutions : une panne de plusieurs heures sera quand même vue.
+on:
+  schedule:
+    - cron: "23,53 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: surveillance
+  cancel-in-progress: false
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Vérifier meta.json du site
+        run: node scripts/surveillance.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SITE: https://ciderfer.github.io/tricolore
