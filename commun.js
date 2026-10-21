@@ -42,6 +42,43 @@ window.T = (() => {
   })();
   const POLL_MS = 15_000;
 
+  // Pointage poussé par le relais (WebSocket, voir worker/direct.js) : une connexion par page, au lieu d'une requête
+  // aux 15 s (le quota gratuit du relais compte les requêtes). onMsg reçoit {part, at, body} ou {part, error}.
+  // Reconnexion si la connexion tombe ou se tait plus de 90 s (iPhone en veille). Trois échecs de suite sans
+  // aucun message : onFail, et la page revient aux lectures aux 15 s. Fermée par le relais à la fin du match.
+  function liveSocket(id, all, onMsg, onFail) {
+    const url = `${WORKER.replace(/^http/, "ws")}/direct/${encodeURIComponent(id)}${all ? "?parts=all" : ""}`;
+    let ws = null, fails = 0, over = false, retry = null, lastMsg = 0;
+    const drop = () => { const w = ws; ws = null; try { w?.close(); } catch { /* déjà fermée */ } };
+    function open() {
+      clearTimeout(retry); retry = null;
+      if (over || ws) return;
+      const w = ws = new WebSocket(url);
+      let got = false;
+      lastMsg = Date.now();
+      w.onmessage = (e) => {
+        if (ws !== w) return;
+        got = true; fails = 0; lastMsg = Date.now();
+        let m;
+        try { m = JSON.parse(e.data); } catch { return; }
+        if (m && typeof m.part === "string") onMsg(m);
+      };
+      w.onclose = (e) => {
+        if (ws !== w) return; // fermée par nous (reconnexion)
+        ws = null;
+        if (over || e.code === 1000 || e.code === 4404) { over = true; return; }
+        if (!got && ++fails >= 3) { over = true; onFail(); return; }
+        retry = setTimeout(open, Math.min(2000 * 2 ** fails, 30_000));
+      };
+    }
+    // Au retour sur l'onglet : connexion morte ou muette depuis plus de 90 s, on la refait.
+    const check = () => { if (!over && !document.hidden && (!ws || Date.now() - lastMsg > 90_000)) { drop(); open(); } };
+    document.addEventListener("visibilitychange", check);
+    const watch = setInterval(check, 30_000);
+    open();
+    return { stop() { over = true; clearInterval(watch); clearTimeout(retry); drop(); } };
+  }
+
   const WORDMARK = "Tri<i></i>co<i></i>lore";
   const UNOFFICIAL = "<p>Site de partisan non officiel, non affilié à la LNH ni au Club de hockey Canadien.</p>";
   const ALERTES = `<p><a class="more" href="alertes.html">Alertes de match ›</a></p>`; // lien du pied de page (alertes.html)
@@ -125,5 +162,5 @@ window.T = (() => {
   }).join("");
 
   return { TZ, MTL, LIVE, DONE, esc, loc, fin, cap, num, F, fStamp, pct, gaa, signed, season, age, tvOf,
-    WORKER, POLL_MS, WORDMARK, UNOFFICIAL, ALERTES, errBox, getJson, load, footer, sections, lastGoal };
+    WORKER, POLL_MS, liveSocket, WORDMARK, UNOFFICIAL, ALERTES, errBox, getJson, load, footer, sections, lastGoal };
 })();

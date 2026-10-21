@@ -26,3 +26,13 @@ namespace_id = "1001"
   [ratelimits.simple]
   limit = 300
   period = 60
+
+# Direct (direct.js) : un Durable Object par match pousse le pointage par WebSocket à tous les partisans.
+# Plan gratuit : seulement les objets « SQLite » (new_sqlite_classes). 100 000 requêtes par jour, à part du Worker.
+[[durable_objects.bindings]]
+name = "DIRECT"
+class_name = "Direct"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Direct"]
