@@ -3,12 +3,17 @@
 // seulement pour le site (et localhost en développement). Aucun secret.
 // Feuilles de match (gamecenter) : seulement les matchs où joue le Canadien, vérifié avec
 // la page « landing » du match. Cache : 5 s en direct, plus long pour un match terminé.
-// Minuterie (scheduled, voir wrangler.toml) : aux 15 minutes, lance la tâche « Données LNH »
-// sur GitHub (workflow_dispatch), parce que l'horaire de GitHub Actions saute la plupart
-// des exécutions. Seul secret : GH_TOKEN, un jeton limité à ce repo (Actions : écriture).
+// Minuterie (scheduled, voir wrangler.toml) : chaque minute; aux 15 minutes (minute % 15 === 0), lance la tâche
+// « Données LNH » sur GitHub (workflow_dispatch), parce que l'horaire de GitHub Actions saute la plupart
+// des exécutions. Secret : GH_TOKEN, un jeton limité à ce repo (Actions : écriture).
 // Limiteur de débit (liaison LIMITE, voir wrangler.toml) : au plus 300 requêtes par minute par adresse IP,
 // pour qu'une boucle (l'en-tête Origin se falsifie) n'épuise pas le quota quotidien. Limite généreuse :
 // au Centre Bell, beaucoup de partisans partagent l'adresse IP de leur opérateur.
+// Alertes de match (Web Push, voir alertes.js et push.js) : POST /push/subscribe, POST /push/unsubscribe et
+// GET /push/vapid-public-key, mêmes règles (origine permise, limiteur). Minuterie chaque minute : regarde l'état
+// du match du Canadien (une lecture LNH, plus la feuille du match quand il est en cours) et envoie les alertes.
+// Secrets des alertes : VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (mailto:). Liaison KV : ALERTES.
+import { runAlertes, subscribe, unsubscribe } from "./alertes.js";
 
 const UPSTREAM = "https://api-web.nhle.com";
 
@@ -62,31 +67,66 @@ async function getUpstream(path, ttl, now, fallbackTtl = 5) {
 
 const DISPATCH = "https://api.github.com/repos/ciderfer/tricolore/actions/workflows/data.yml/dispatches";
 
+// Lance la tâche « Données LNH » sur GitHub. Toute réponse autre que 204 est une erreur.
+export async function dispatchData(env) {
+  if (!env.GH_TOKEN) throw new Error("GH_TOKEN manquant : tâche de données non lancée");
+  const r = await fetch(DISPATCH, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${env.GH_TOKEN}`, accept: "application/vnd.github+json",
+      "x-github-api-version": "2022-11-28", "user-agent": "tricolore-worker",
+    },
+    body: JSON.stringify({ ref: "main" }),
+  });
+  if (r.status !== 204) throw new Error(`GitHub : HTTP ${r.status} ${await r.text()}`);
+}
+
+// Routes /push/* (le limiteur et l'origine sont déjà vérifiés). Corps JSON de 4 Ko au plus.
+async function push(request, env, pathname, origin) {
+  const nostore = { "cache-control": "no-store" };
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: {
+      "access-control-allow-origin": origin, "access-control-allow-methods": "GET, POST",
+      "access-control-allow-headers": "content-type", "access-control-max-age": "86400", vary: "Origin" } });
+  }
+  const want = pathname === "/push/vapid-public-key" ? "GET" : "POST";
+  if (!["/push/vapid-public-key", "/push/subscribe", "/push/unsubscribe"].includes(pathname)) return reply(404, { error: "chemin non permis" }, origin);
+  if (request.method !== want) return reply(405, { error: `${want} seulement` }, origin, { allow: want });
+  if (!env.ALERTES || !env.VAPID_PUBLIC_KEY) return reply(503, { error: "alertes pas encore configurées" }, origin, nostore);
+  if (want === "GET") return reply(200, { key: env.VAPID_PUBLIC_KEY }, origin, { "cache-control": "public, max-age=3600" });
+  const text = await request.text();
+  if (text.length > 4096) return reply(413, { error: "requête trop grosse" }, origin, nostore);
+  let body;
+  try { body = JSON.parse(text); } catch { return reply(400, { error: "JSON invalide" }, origin, nostore); }
+  const r = pathname === "/push/subscribe" ? await subscribe(env, body) : await unsubscribe(env, body);
+  return reply(r.status, r.body, origin, nostore);
+}
+
 export default {
-  async scheduled(_event, env) {
-    if (!env.GH_TOKEN) throw new Error("GH_TOKEN manquant : tâche de données non lancée");
-    const r = await fetch(DISPATCH, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${env.GH_TOKEN}`, accept: "application/vnd.github+json",
-        "x-github-api-version": "2022-11-28", "user-agent": "tricolore-worker",
-      },
-      body: JSON.stringify({ ref: "main" }),
-    });
-    if (r.status !== 204) throw new Error(`GitHub : HTTP ${r.status} ${await r.text()}`);
+  // Minuterie chaque minute (wrangler.toml) : aux 15 minutes (0, 15, 30, 45), la tâche de données comme avant;
+  // chaque minute, les alertes. Une tâche en échec n'empêche pas l'autre; l'erreur est relancée ensuite.
+  async scheduled(event, env) {
+    const t = event?.scheduledTime ?? Date.now();
+    const tasks = [runAlertes(env, t).then((r) => { if (r.events || r.failed || r.removed) console.log("alertes", JSON.stringify(r)); })];
+    if (new Date(t).getUTCMinutes() % 15 === 0) tasks.unshift(dispatchData(env));
+    const errs = (await Promise.allSettled(tasks)).filter((r) => r.status === "rejected").map((r) => r.reason);
+    if (errs.length === 1) throw errs[0];
+    if (errs.length) throw new AggregateError(errs, errs.map((e) => e?.message).join(" · "));
   },
 
   async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
     const okOrigin = ALLOWED_ORIGIN.test(origin) ? origin : null;
     if (!okOrigin) return reply(403, { error: "origine non permise" }, null);
-    if (request.method !== "GET") return reply(405, { error: "GET seulement" }, okOrigin, { allow: "GET" });
+    const { pathname } = new URL(request.url);
+    const isPush = pathname.startsWith("/push/");
+    if (!isPush && request.method !== "GET") return reply(405, { error: "GET seulement" }, okOrigin, { allow: "GET" });
     if (env.LIMITE) {
       const { success } = await env.LIMITE.limit({ key: request.headers.get("cf-connecting-ip") || "inconnue" });
       if (!success) return reply(429, { error: "trop de requêtes, réessayez dans une minute" }, okOrigin, { "retry-after": "60", "cache-control": "no-store" });
     }
+    if (isPush) return push(request, env, pathname, okOrigin);
 
-    const { pathname } = new URL(request.url);
     const route = ROUTES.find(([re]) => re.test(pathname));
     if (!route) return reply(404, { error: "chemin non permis" }, okOrigin);
     const now = Date.now();

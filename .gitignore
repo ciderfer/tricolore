@@ -1,3 +1,7 @@
 shots-pr/
 worker/.wrangler/
 node_modules/
+# Secrets locaux de wrangler dev (clés VAPID de test, etc.) : jamais dans le repo.
+.dev.vars
+.dev.vars.*
+worker/.dev.vars*

@@ -1,0 +1,239 @@
+{
+ "_source": "api-web.nhle.com/v1/gamecenter/2026020141/landing, lu le 2026-10-20 (champs utiles seulement)",
+ "id": 2026020141,
+ "season": 20262027,
+ "gameType": 2,
+ "gameDate": "2026-10-20",
+ "startTimeUTC": "2026-10-20T23:00:00Z",
+ "gameState": "FINAL",
+ "gameScheduleState": "OK",
+ "periodDescriptor": {
+  "number": 4,
+  "periodType": "OT",
+  "maxRegulationPeriods": 3
+ },
+ "awayTeam": {
+  "id": 28,
+  "commonName": {
+   "default": "Sharks"
+  },
+  "abbrev": "SJS",
+  "score": 4
+ },
+ "homeTeam": {
+  "id": 8,
+  "commonName": {
+   "default": "Canadiens"
+  },
+  "abbrev": "MTL",
+  "score": 3
+ },
+ "summary": {
+  "scoring": [
+   {
+    "periodDescriptor": {
+     "number": 1,
+     "periodType": "REG",
+     "maxRegulationPeriods": 3
+    },
+    "goals": [
+     {
+      "situationCode": "1551",
+      "eventId": 277,
+      "strength": "ev",
+      "playerId": 8484801,
+      "firstName": {
+       "default": "Macklin"
+      },
+      "lastName": {
+       "default": "Celebrini"
+      },
+      "name": {
+       "default": "M. Celebrini"
+      },
+      "teamAbbrev": {
+       "default": "SJS"
+      },
+      "goalsToDate": 4,
+      "awayScore": 1,
+      "homeScore": 0,
+      "timeInPeriod": "13:49",
+      "shotType": "snap",
+      "goalModifier": "none"
+     },
+     {
+      "situationCode": "1551",
+      "eventId": 371,
+      "strength": "ev",
+      "playerId": 8480018,
+      "firstName": {
+       "default": "Nick"
+      },
+      "lastName": {
+       "default": "Suzuki"
+      },
+      "name": {
+       "default": "N. Suzuki"
+      },
+      "teamAbbrev": {
+       "default": "MTL"
+      },
+      "goalsToDate": 5,
+      "awayScore": 1,
+      "homeScore": 1,
+      "timeInPeriod": "16:38",
+      "shotType": "snap",
+      "goalModifier": "none"
+     }
+    ]
+   },
+   {
+    "periodDescriptor": {
+     "number": 2,
+     "periodType": "REG",
+     "maxRegulationPeriods": 3
+    },
+    "goals": [
+     {
+      "situationCode": "1551",
+      "eventId": 495,
+      "strength": "ev",
+      "playerId": 8483515,
+      "firstName": {
+       "default": "Juraj"
+      },
+      "lastName": {
+       "default": "Slafkovský"
+      },
+      "name": {
+       "default": "J. Slafkovský"
+      },
+      "teamAbbrev": {
+       "default": "MTL"
+      },
+      "goalsToDate": 2,
+      "awayScore": 1,
+      "homeScore": 2,
+      "timeInPeriod": "01:49",
+      "shotType": "snap",
+      "goalModifier": "none"
+     },
+     {
+      "situationCode": "1551",
+      "eventId": 667,
+      "strength": "ev",
+      "playerId": 8481540,
+      "firstName": {
+       "default": "Cole"
+      },
+      "lastName": {
+       "default": "Caufield"
+      },
+      "name": {
+       "default": "C. Caufield"
+      },
+      "teamAbbrev": {
+       "default": "MTL"
+      },
+      "goalsToDate": 6,
+      "awayScore": 1,
+      "homeScore": 3,
+      "timeInPeriod": "14:03",
+      "shotType": "snap",
+      "goalModifier": "none"
+     }
+    ]
+   },
+   {
+    "periodDescriptor": {
+     "number": 3,
+     "periodType": "REG",
+     "maxRegulationPeriods": 3
+    },
+    "goals": [
+     {
+      "situationCode": "1551",
+      "eventId": 834,
+      "strength": "ev",
+      "playerId": 8485402,
+      "firstName": {
+       "default": "Michael"
+      },
+      "lastName": {
+       "default": "Misa"
+      },
+      "name": {
+       "default": "M. Misa"
+      },
+      "teamAbbrev": {
+       "default": "SJS"
+      },
+      "goalsToDate": 1,
+      "awayScore": 2,
+      "homeScore": 3,
+      "timeInPeriod": "05:36",
+      "shotType": "snap",
+      "goalModifier": "none"
+     },
+     {
+      "situationCode": "1541",
+      "eventId": 911,
+      "strength": "pp",
+      "playerId": 8475726,
+      "firstName": {
+       "default": "Tyler"
+      },
+      "lastName": {
+       "default": "Toffoli"
+      },
+      "name": {
+       "default": "T. Toffoli"
+      },
+      "teamAbbrev": {
+       "default": "SJS"
+      },
+      "goalsToDate": 3,
+      "awayScore": 3,
+      "homeScore": 3,
+      "timeInPeriod": "11:09",
+      "shotType": "snap",
+      "goalModifier": "none"
+     }
+    ]
+   },
+   {
+    "periodDescriptor": {
+     "number": 4,
+     "periodType": "OT",
+     "maxRegulationPeriods": 3
+    },
+    "goals": [
+     {
+      "situationCode": "1431",
+      "eventId": 1103,
+      "strength": "pp",
+      "playerId": 8484801,
+      "firstName": {
+       "default": "Macklin"
+      },
+      "lastName": {
+       "default": "Celebrini"
+      },
+      "name": {
+       "default": "M. Celebrini"
+      },
+      "teamAbbrev": {
+       "default": "SJS"
+      },
+      "goalsToDate": 5,
+      "awayScore": 4,
+      "homeScore": 3,
+      "timeInPeriod": "02:13",
+      "shotType": "snap",
+      "goalModifier": "none"
+     }
+    ]
+   }
+  ]
+ }
+}

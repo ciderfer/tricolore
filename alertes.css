@@ -1,0 +1,18 @@
+/* Tricolore — page Alertes de match (alertes.html), en plus de styles.css. Style Épuré : sans bordure, aplats, coins carrés. */
+.al-opts{margin:20px 0 18px;padding:0;border:0;min-width:0}
+.al-opts legend{padding:0;margin:0 0 4px;opacity:.85}
+.al-opt{display:flex;align-items:center;gap:14px;margin:0 -18px;padding:12px 18px;font-weight:800;font-size:19px;cursor:pointer}
+.al-opt:nth-of-type(odd){background:var(--zebra-red)}
+.al-opt small{display:block;font-weight:600;font-size:13.5px;line-height:1.3;opacity:.85}
+.al-opt input{appearance:none;-webkit-appearance:none;flex:none;width:26px;height:26px;margin:0;background:rgba(255,255,255,.24);border-radius:0;cursor:pointer}
+.al-opt input:checked{background:var(--white);box-shadow:inset 0 0 0 6px var(--white),inset 0 0 0 13px var(--blue)}
+.al-opt input:focus-visible{outline:3px solid var(--white);outline-offset:2px}
+.al-opts:disabled .al-opt{opacity:.6;cursor:default}
+button.ics-btn{width:100%;border:0;border-radius:0;font-family:inherit;cursor:pointer}
+button.ics-btn:disabled{opacity:.6;cursor:default}
+button.ics-btn:focus-visible{outline:3px solid var(--white);outline-offset:2px}
+.al-off::before{content:"−"}
+.al-msg:empty{display:none}
+.al-steps{margin:14px 0 0;padding-left:24px;font-weight:600;line-height:1.4}
+.al-steps li{margin:0 0 10px}
+.al-steps b{font-weight:900}

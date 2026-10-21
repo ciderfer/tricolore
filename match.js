@@ -246,6 +246,6 @@
     timer = setTimeout(() => { if (document.visibilityState === "visible") render(false); else schedule(true); }, wait);
   }
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && timer) { clearTimeout(timer); render(false); } });
-  document.getElementById("foot").innerHTML = `<p>Données : API publique de la LNH, par le relais Tricolore (Cloudflare). Heures de l’Est.</p>${UNOFFICIAL}`;
+  document.getElementById("foot").innerHTML = `<p>Données : API publique de la LNH, par le relais Tricolore (Cloudflare). Heures de l’Est.</p>${T.ALERTES}${UNOFFICIAL}`;
   render(true);
 })();
