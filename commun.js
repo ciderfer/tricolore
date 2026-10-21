@@ -44,6 +44,7 @@ window.T = (() => {
 
   const WORDMARK = "Tri<i></i>co<i></i>lore";
   const UNOFFICIAL = "<p>Site de partisan non officiel, non affilié à la LNH ni au Club de hockey Canadien.</p>";
+  const ALERTES = `<p><a class="more" href="alertes.html">Alertes de match ›</a></p>`; // lien du pied de page (alertes.html)
 
   // lnh : la source est un fichier du site tiré de l'API LNH (sinon : le relais en direct ou une fiche).
   const errBox = (what, detail, lnh = true) =>
@@ -78,7 +79,7 @@ window.T = (() => {
     return `<p>Données : API publique de la LNH${when ? ` · dernière modification le ${esc(when)}` : ""}${checked ? `, vérifiées le ${esc(checked)}` : ""}${when || checked ? " (heure de l’Est)" : ""}.</p>
       ${metaErr ? `<p class="foot-warn">Heure de mise à jour inconnue (meta.json : ${esc(metaErr)}).</p>` : ""}
       ${failed.length ? `<p class="foot-warn">Source en échec : ${esc(failed.join(", "))}.</p>` : ""}
-      ${UNOFFICIAL}`;
+      ${ALERTES}${UNOFFICIAL}`;
   }
 
   // Dernier but du match, tiré du sommaire de « landing » (texte brut, à échapper avant affichage).
@@ -124,5 +125,5 @@ window.T = (() => {
   }).join("");
 
   return { TZ, MTL, LIVE, DONE, esc, loc, fin, cap, num, F, fStamp, pct, gaa, signed, season, age, tvOf,
-    WORKER, POLL_MS, WORDMARK, UNOFFICIAL, errBox, getJson, load, footer, sections, lastGoal };
+    WORKER, POLL_MS, WORDMARK, UNOFFICIAL, ALERTES, errBox, getJson, load, footer, sections, lastGoal };
 })();

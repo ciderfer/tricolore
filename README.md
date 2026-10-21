@@ -28,7 +28,8 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 | `.github/workflows/surveillance.yml`, `scripts/surveillance.mjs`, `scripts/etat.mjs` | Surveillance des données : ouvre une issue GitHub (donc un courriel) si le site n’a pas vérifié ses données depuis 90 min ou si une source de la LNH est en échec depuis plus de 2 h, et la ferme au retour à la normale. Voir « Surveillance » plus bas |
 | `tests/` | Tests de la logique pure (surveillance, dernier but) : `node --test tests/*.test.mjs` |
 | `.github/dependabot.yml` | Mises à jour hebdomadaires des actions GitHub, fixées par SHA dans les workflows |
-| `worker/` | Proxy Cloudflare pour le pointage en direct, et minuterie qui lance la tâche de données aux 15 minutes (secret `GH_TOKEN` : jeton GitHub limité à ce repo, permission Actions en écriture) |
+| `worker/` | Proxy Cloudflare pour le pointage en direct, minuterie chaque minute (tâche de données aux 15 minutes, secret `GH_TOKEN` : jeton GitHub limité à ce repo, permission Actions en écriture; alertes de match) et envoi Web Push (`alertes.js`, `push.js`; tests : `npm test`) |
+| `alertes.html`, `alertes.js`, `alertes.css`, `sw.js` | Page « Alertes de match » (lien au bas des pages) et service worker des notifications |
 
 ## En local
 
@@ -94,13 +95,34 @@ Page `joueur.html?id=NUMÉRO` (script `joueur.js`). Chaque nom de l’alignement
 - Icône originale (pas le logo de la LNH ni du CH), façon numéro de chandail cousu : « T » de la police Graduate en bleu, contours blanc / rouge / blanc, sur le rouge du chandail avec la bande blanc/bleu/blanc. Le T est un tracé (aucune police requise). Sources SVG dans `icons/`, générées par `scripts/icones.py`; les petits favicons sont simplifiés.
 - `manifest.webmanifest` : nom « Tricolore », `display: standalone`, `start_url` et `scope` `/tricolore/`.
 - Sur iPhone : Safari → Partager → « Sur l’écran d’accueil ». Barre d’état translucide au-dessus de la bande bleue.
-- Aucun service worker : la page lit toujours les données fraîches.
+- Service worker `sw.js` (portée `/tricolore/`) seulement pour les alertes de match : `push` et `notificationclick`, aucun gestionnaire `fetch`, donc aucune mise en cache; les pages lisent toujours les données fraîches.
 - Politique de sécurité du contenu (balise `Content-Security-Policy` dans chaque page) : scripts, styles et polices du site seulement, connexions au site et au Worker (et à `localhost` pour les tests). Aucun style ni script en ligne.
+
+## Alertes de match (iPhone)
+
+Page `alertes.html` (lien « Alertes de match » au bas des pages). Notifications Web Push pour les matchs du Canadien : « Le match commence », chaque but (les deux équipes : marqueur, pointage, période) et le final. Cases à cocher pour chaque type.
+
+- iPhone : iOS 16.4 ou plus récent, et **seulement depuis l’icône de l’écran d’accueil**. Dans Safari, la page affiche les étapes (Share › Add to Home Screen) au lieu du bouton.
+- Le Worker (minuterie chaque minute) lit `scoreboard/MTL/now`, plus `gamecenter/<id>/landing` seulement pendant un match ou juste après. Les messages ne reprennent que ce que l’API LNH rend.
+- Abonnements dans le KV `ALERTES` (une clé par appareil, tout dans les métadonnées); état des envois dans la clé `etat`. La minuterie n’écrit que lorsqu’une alerte part (environ 10 écritures par match, limite gratuite : 1 000 par jour). Abonnement expiré (404 ou 410) : retiré au premier envoi. Au plus 40 appareils (limite gratuite de 50 sous-requêtes par exécution).
+- Chiffrement (RFC 8291, `aes128gcm`) et jeton VAPID (RFC 8292, ES256) faits avec WebCrypto, sans dépendance (`worker/push.js`).
+- Mise en place (faite le 20 octobre 2026; à refaire seulement pour changer les clés VAPID, ce qui oblige chaque appareil à se réabonner), dans `worker/` :
+
+```sh
+npx wrangler kv namespace create ALERTES      # puis mettre l’id affiché dans wrangler.toml
+node vapid-keys.mjs                           # affiche une paire de clés VAPID
+npx wrangler secret put VAPID_PUBLIC_KEY
+npx wrangler secret put VAPID_PRIVATE_KEY
+npx wrangler secret put VAPID_SUBJECT         # mailto:adresse@exemple.com
+npm test && npm run deploy
+```
+
+- Test local : `node vapid-keys.mjs --dev-vars > .dev.vars` (fichier ignoré par git), `npx wrangler dev --test-scheduled`, site ouvert avec `?worker=http://localhost:8787`, minuterie déclenchée par `curl "http://localhost:8787/__scheduled?cron=*+*+*+*+*"`. `NHL_API` (dans `.dev.vars`) peut pointer vers une fausse API LNH, et `PUSH_DEV=1` permet un faux service de push sur localhost.
 
 ## Worker Cloudflare (pointage en direct)
 
 - Adresse : `https://tricolore.tricolore.workers.dev` (constante `WORKER_DEFAULT` dans `app.js`).
-- Requêtes GET seulement, depuis `https://ciderfer.github.io` ou `localhost`. Au plus 300 requêtes par minute par adresse IP (liaison `LIMITE` de `wrangler.toml`), sinon réponse 429. Chemins permis : `scoreboard/MTL/now`, `score/now` (cache 5 s), `gamecenter/<id>/landing|boxscore|right-rail` (matchs du Canadien seulement, vérifié avec `landing` ; cache 5 s en direct, 2 min si final non officiel, 1 h si officiel), `club-schedule-season/MTL/now`, `standings/now` (cache 60 s). Aucun secret.
+- Requêtes GET seulement (sauf `POST /push/subscribe` et `POST /push/unsubscribe`, voir Alertes de match), depuis `https://ciderfer.github.io` ou `localhost`. Au plus 300 requêtes par minute par adresse IP (liaison `LIMITE` de `wrangler.toml`), sinon réponse 429. Chemins permis : `scoreboard/MTL/now`, `score/now` (cache 5 s), `gamecenter/<id>/landing|boxscore|right-rail` (matchs du Canadien seulement, vérifié avec `landing` ; cache 5 s en direct, 2 min si final non officiel, 1 h si officiel), `club-schedule-season/MTL/now`, `standings/now` (cache 60 s). Aucun secret.
 - Déploiement manuel, depuis le dossier `worker/` (Node 22+, compte Cloudflare connecté). La version de wrangler est fixée dans `worker/package.json` :
 
 ```sh

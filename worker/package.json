@@ -1,9 +1,11 @@
 {
   "name": "tricolore-worker",
   "private": true,
-  "description": "Relais Cloudflare de Tricolore (pointage en direct, minuterie de la tâche de données).",
+  "type": "module",
+  "description": "Relais Cloudflare de Tricolore (pointage en direct, minuterie de la tâche de données, alertes de match Web Push).",
   "scripts": {
     "dev": "wrangler dev --port 8787",
+    "test": "node --test \"test/*.test.js\"",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {

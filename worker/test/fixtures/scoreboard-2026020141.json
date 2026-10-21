@@ -1,0 +1,45 @@
+{
+ "_source": "api-web.nhle.com/v1/scoreboard/MTL/now, lu le 2026-10-20 (ce match seulement)",
+ "focusedDate": "2026-10-20",
+ "gamesByDate": [
+  {
+   "date": "2026-10-20",
+   "games": [
+    {
+     "id": 2026020141,
+     "season": 20262027,
+     "gameType": 2,
+     "gameDate": "2026-10-20",
+     "venue": {
+      "default": "Centre Bell"
+     },
+     "startTimeUTC": "2026-10-20T23:00:00Z",
+     "gameState": "FINAL",
+     "gameScheduleState": "OK",
+     "period": 4,
+     "periodDescriptor": {
+      "number": 4,
+      "periodType": "OT",
+      "maxRegulationPeriods": 3
+     },
+     "awayTeam": {
+      "id": 28,
+      "commonName": {
+       "default": "Sharks"
+      },
+      "abbrev": "SJS",
+      "score": 4
+     },
+     "homeTeam": {
+      "id": 8,
+      "commonName": {
+       "default": "Canadiens"
+      },
+      "abbrev": "MTL",
+      "score": 3
+     }
+    }
+   ]
+  }
+ ]
+}
