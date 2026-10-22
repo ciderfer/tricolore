@@ -1,18 +1,14 @@
 {
-  "updatedAt": "2026-10-22T10:46:28.183Z",
-  "checkedAt": "2026-10-22T10:46:28.183Z",
+  "updatedAt": "2026-10-22T11:00:33.565Z",
+  "checkedAt": "2026-10-22T11:00:33.565Z",
   "sources": {
     "schedule": {
-      "ok": false,
-      "url": "https://api-web.nhle.com/v1/club-schedule-season/MTL/now",
-      "error": "The operation was aborted due to timeout",
-      "since": "2026-10-22T10:45:28.086Z"
+      "ok": true,
+      "url": "https://api-web.nhle.com/v1/club-schedule-season/MTL/20262027"
     },
     "scoreboard": {
-      "ok": false,
-      "url": "https://api-web.nhle.com/v1/scoreboard/MTL/now",
-      "error": "The operation was aborted due to timeout",
-      "since": "2026-10-22T10:45:28.086Z"
+      "ok": true,
+      "url": "https://api-web.nhle.com/v1/scoreboard/MTL/now"
     },
     "standings": {
       "ok": true,
