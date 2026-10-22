@@ -346,7 +346,8 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
 .stamp-btn:focus-visible{outline:3px solid var(--white);outline-offset:2px}
 .news-hd + .news-fail{margin:0 0 14px}
 /* Compte à rebours de la carte du prochain match */
-.cd{margin:20px 0 0;background:var(--blue);border-top:10px solid var(--white);border-bottom:10px solid var(--white);padding:14px 18px 16px}
+.cd{margin:20px 0 0;background:var(--blue);border-top:10px solid var(--white);padding:14px 18px 16px}
+.hero:has(>.cd){padding-bottom:0} /* le compte à rebours ferme la carte : pas de bande rouge vide dessous */
 .cd .lbl{display:block;color:#c3c8f2}
 .cd>.lbl{margin-bottom:8px}
 .cd-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
@@ -423,6 +424,8 @@ a:focus-visible{outline:3px solid var(--white);outline-offset:2px}
   main:has(>.blk>.roster:not(.l5))>:not(.white){grid-column:1/-1}
   main:has(>.blk>.roster:not(.l5))>.sk-blk{grid-column:1;grid-row:span 2}
   main:has(>.blk>.roster:not(.l5))>.prof,main:has(>.blk>.roster:not(.l5))>.sk-blk~.white{grid-column:2}
+  /* Rangées : titre, meneurs, alignement, manche, profil, gardiens. La hauteur en trop du graphique va aux gardiens (1fr), pas au profil. */
+  main:has(>.blk>.roster:not(.l5)):has(>.sk-blk){grid-template-rows:repeat(5,auto) 1fr}
   .blk:has(>.roster:not(.l5)){display:grid;grid-template-columns:2fr 1fr 1fr;column-gap:18px;align-content:start}
   .blk:has(>.roster:not(.l5))>.h{grid-column:1/-1}
   .blk:has(>.roster:not(.l5))>.grp{grid-row:2;margin:0;padding-left:8px;padding-right:8px}
