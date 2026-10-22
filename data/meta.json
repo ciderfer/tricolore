@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-10-22T22:45:31.491Z",
-  "checkedAt": "2026-10-22T22:45:31.491Z",
+  "updatedAt": "2026-10-22T23:15:27.204Z",
+  "checkedAt": "2026-10-22T23:15:27.204Z",
   "sources": {
     "schedule": {
       "ok": true,
@@ -47,7 +47,7 @@
   },
   "joueurs": {
     "ok": true,
-    "count": 24,
+    "count": 25,
     "failed": []
   }
 }
