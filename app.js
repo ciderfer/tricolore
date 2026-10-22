@@ -11,6 +11,7 @@
   // fr-CA donne « 19 h » : on ne garde que les chiffres (correctif du « 19 h h 00 »).
   const hourOf = (d) => fH.format(d).replace(/\D/g, "");
   const minOf = (d) => fM.format(d).padStart(2, "0");
+  const hm = (d) => `${hourOf(d)} h ${minOf(d)}`;
 
   const STALE_MS = 90 * 60 * 1000; // la vérification des données a lieu au moins aux 45 min
 
@@ -49,7 +50,24 @@
       })()}
       <div class="opp"><div><span class="vs">${home ? "Contre les" : "Chez les"}</span><span class="name cond${Math.max(...opp.name.split(/\s+/).map((w) => w.length)) >= 9 ? " long" : ""}">${esc(opp.name)}</span><span class="place">de ${esc(opp.place)}</span></div></div>
       <div class="time"><span class="num">${tbd ? "À CONFIRMER" : `${hourOf(dt)}<span class="hh">h</span>${minOf(dt)}`}</span><small>Heure<br>de l’Est</small></div>
-      <div class="meta"><span class="chip w">${esc(loc(g.venue))}</span>${chips(tvOf(g))}</div>${faceAFace(d, g, home, opp, byAbbr)}</section>`;
+      <div class="meta"><span class="chip w">${esc(loc(g.venue))}</span>${chips(tvOf(g))}</div>
+      ${tbd ? "" : `<div class="cd" role="timer" aria-label="Temps avant la mise au jeu" data-start="${esc(g.startTimeUTC)}">${countdown(dt)}</div>`}${faceAFace(d, g, home, opp, byAbbr)}</section>`;
+  }
+
+  // Compte à rebours jusqu'à l'heure prévue de la mise au jeu (calendrier LNH). La carte passe au pointage
+  // seulement quand la LNH dit le match en cours (fichiers du site ou relais en direct) : d'ici là, on attend.
+  const two = (n) => String(n).padStart(2, "0");
+  function countdown(start) {
+    const ms = start - Date.now();
+    if (ms <= 0) return `<span class="lbl">Mise au jeu</span><span class="cd-now cond">${ms > -20 * 60e3 ? "Imminente" : "Pointage en attente de la LNH"}</span>`;
+    const s = Math.floor(ms / 1000), days = Math.floor(s / 86400);
+    const u = (v, l, c = "") => `<div class="cd-u${c}"><span class="cd-v num">${two(v)}</span><span class="lbl">${l}</span></div>`;
+    return `<span class="lbl">Mise au jeu dans</span><div class="cd-row">${u(days, days > 1 ? "jours" : "jour")}${u(Math.floor((s % 86400) / 3600), "h")}${u(Math.floor((s % 3600) / 60), "min")}${u(s % 60, "s", " cd-s")}</div>`;
+  }
+  function tickCountdown() {
+    const el = document.querySelector(".cd[data-start]"); // relu à chaque seconde : la carte peut être redessinée
+    if (el) el.innerHTML = countdown(new Date(el.dataset.start));
+    setTimeout(tickCountdown, 1000 - (Date.now() % 1000));
   }
 
   // Face-à-face (grand écran seulement, masqué sur téléphone) : les deux équipes selon standings.json,
@@ -164,7 +182,8 @@
     return fNewsDate.format(new Date(t));
   }
   function news(d) {
-    const h = `<h2 class="h cond">Nouvelles</h2>`;
+    const h = `<div class="news-hd"><h2 class="h cond">Nouvelles</h2><p class="stamp">Mis à jour<br>à <b>${esc(hm(refreshedAt))}</b>
+      <button type="button" class="stamp-btn">Actualiser</button></p></div>${refreshErr ? `<p class="news-fail">${esc(refreshErr)}</p>` : ""}`;
     const status = Object.values(d.meta?.news || {});
     const failed = status.filter((s) => !s.ok);
     const failNote = failed.length
@@ -244,7 +263,11 @@
       Rangs 1 et 2 (sur fond blanc) : les 2 équipes repêchées. Écart : points de retard sur la 2<sup>e</sup> équipe repêchée. %PTS : points obtenus sur points possibles.</p></section>`;
   }
 
-  T.load([...Object.keys(SOURCE_LABEL), "news"]).then((d) => {
+  const SOURCES = [...Object.keys(SOURCE_LABEL), "news"];
+  // D : dernières données lues. direct : la carte du haut vient du relais en direct (une actualisation la garde).
+  let D = null, direct = false, refreshedAt = new Date(), refreshErr = "";
+  function render(d) {
+    D = d;
     const all = d.standings?.standings || [];
     const byAbbr = Object.fromEntries(all.map((t) => [t.teamAbbrev.default, t]));
     const me = byAbbr[MTL];
@@ -253,10 +276,84 @@
       () => `<div id="hero-slot">${hero(d, byAbbr)}</div>`, () => staleBanner(d), () => band(d, me), () => results(d), () => sleeve,
       () => standings(d, me, all), () => series(d, me, all), () => sleeve, () => news(d),
     ];
-    document.getElementById("app").innerHTML = T.sections(parts);
+    const app = document.getElementById("app");
+    const keep = direct ? document.getElementById("hero-slot") : null;
+    const announcer = app.querySelector(":scope > [aria-live]"); // annonce des buts, créée par startLive
+    const focused = document.activeElement?.classList.contains("stamp-btn");
+    app.innerHTML = T.sections(parts);
+    if (keep) document.getElementById("hero-slot").replaceWith(keep);
+    if (announcer) app.append(announcer);
+    if (focused) app.querySelector(".stamp-btn")?.focus();
     document.getElementById("foot").innerHTML = footer(d);
-    startLive(d);
+  }
+
+  T.load(SOURCES).then((d) => {
+    render(d);
+    startLive();
+    tickCountdown();
+    pullToRefresh();
   });
+
+  // ---- Actualiser : tirer la page vers le bas (téléphone) ou bouton « Actualiser » des nouvelles ----
+  // Relit tous les fichiers du site. Écouteurs passifs, aucun preventDefault : on laisse le rebond natif
+  // d'iOS Safari tel quel et on affiche seulement un indicateur fixe. Si la lecture échoue, on garde l'affichage
+  // précédent et on le dit.
+  let busy = false, ind = null, hideTimer = null;
+  function show(text, cls) {
+    clearTimeout(hideTimer);
+    ind.textContent = text;
+    ind.className = `ptr${cls ? ` on ${cls}` : ""}`;
+  }
+  async function refresh() {
+    if (busy) return;
+    busy = true;
+    show("Actualisation…", "busy");
+    const wait = new Promise((r) => setTimeout(r, 500)); // l'indicateur reste visible au moins une demi-seconde
+    const d = await Promise.race([T.load(SOURCES), new Promise((r) => setTimeout(r, 15_000, null))]);
+    await wait;
+    const now = new Date();
+    const fail = !d ? "délai dépassé" : d.errors.meta && SOURCES.every((n) => !d[n]) ? "réseau ou site injoignable" : "";
+    if (fail) {
+      refreshErr = `Échec de l’actualisation à ${hm(now)} (${fail}). Données affichées : celles lues à ${hm(refreshedAt)}.`;
+      render(D);
+    } else {
+      refreshErr = "";
+      refreshedAt = now;
+      render(d);
+    }
+    show(fail ? `Échec de l’actualisation : ${fail}` : `Mis à jour à ${hm(now)}`, fail ? "fail" : "done");
+    hideTimer = setTimeout(() => show("", ""), fail ? 4000 : 2000);
+    busy = false;
+  }
+  function pullToRefresh() {
+    ind = document.createElement("p");
+    ind.setAttribute("role", "status");
+    show("", "");
+    document.body.append(ind);
+    document.getElementById("app").addEventListener("click", (e) => { if (e.target.closest(".stamp-btn")) refresh(); });
+    const PULL = 80; // px de glissement du doigt
+    let y0 = null, ready = false;
+    addEventListener("touchstart", (e) => {
+      y0 = !busy && scrollY <= 0 && e.touches.length === 1 ? e.touches[0].clientY : null;
+      ready = false;
+    }, { passive: true });
+    addEventListener("touchmove", (e) => {
+      if (y0 === null) return;
+      const dy = e.touches[0].clientY - y0;
+      if (scrollY > 0 || dy < 0) { y0 = null; show("", ""); return; } // on fait défiler la page, pas actualiser
+      if (dy < 12) return;
+      ready = dy >= PULL;
+      show(ready ? "Relâcher pour actualiser" : "Tirer pour actualiser", ready ? "ready" : "pull");
+      ind.style.setProperty("--p", Math.min(1, dy / PULL).toFixed(2));
+    }, { passive: true });
+    const end = () => {
+      if (y0 === null) return;
+      y0 = null;
+      if (ready) refresh(); else show("", "");
+    };
+    addEventListener("touchend", end, { passive: true });
+    addEventListener("touchcancel", () => { y0 = null; show("", ""); }, { passive: true });
+  }
 
   function staleBanner(d) {
     const t = Date.parse(d.meta?.checkedAt || d.meta?.updatedAt || "");
@@ -278,7 +375,7 @@
     }) || null;
   }
 
-  function startLive(d) {
+  function startLive() {
     // busy : une requête est en cours. Sans ce drapeau, revenir sur l'onglet pendant une requête
     // lançait une deuxième boucle de mises à jour (puis une troisième, etc.).
     let timer = null, busy = false, stopped = false, failures = 0, lastGood = null, feed = null, noSocket = false;
@@ -298,19 +395,20 @@
         if (goalKey !== undefined && lg.key !== goalKey) announcer.textContent = lg.text;
         goalKey = lg.key;
       } else if (goalKey === undefined && !lg?.pending) goalKey = null; // aucun but encore : le premier sera annoncé
-      if (LIVE.has(live.gameState) || DONE.has(live.gameState)) slot().innerHTML = liveHero(live, asOf, "worker");
+      if (LIVE.has(live.gameState) || DONE.has(live.gameState)) { slot().innerHTML = liveHero(live, asOf, "worker"); direct = true; }
       if (DONE.has(live.gameState)) { stopped = true; feed?.stop(); }
     }
     function bad(why) {
       failures += 1;
       console.warn("Pointage en direct indisponible :", why);
-      const metaTime = d.meta?.updatedAt ? fStamp.format(new Date(d.meta.updatedAt)) : "heure inconnue";
+      const metaTime = D.meta?.updatedAt ? fStamp.format(new Date(D.meta.updatedAt)) : "heure inconnue";
       const note = `Pointage en direct indisponible. Affichage des données du site en date du ${metaTime} (heure de l’Est).`;
       if (lastGood && LIVE.has(lastGood.live.gameState)) {
         const staleNote = `Pointage en direct indisponible. Dernier pointage reçu à ${fClock.format(lastGood.asOf)} (heure de l’Est).`;
         slot().innerHTML = liveHero(lastGood.live, lastGood.asOf, "worker", staleNote);
       } else {
-        slot().innerHTML = hero(d, Object.fromEntries((d.standings?.standings || []).map((t) => [t.teamAbbrev.default, t])));
+        direct = false;
+        slot().innerHTML = hero(D, Object.fromEntries((D.standings?.standings || []).map((t) => [t.teamAbbrev.default, t])));
         const st = slot().querySelector(".hero");
         if (st) st.insertAdjacentHTML("beforeend", `<p class="warn-note hero-note">${esc(note)}</p>`);
       }
@@ -320,7 +418,7 @@
     async function tick() {
       timer = null;
       if (stopped || document.hidden) return;
-      const g = liveCandidate(d);
+      const g = liveCandidate(D);
       if (!g) { timer = setTimeout(tick, 60_000); return; } // rien à suivre : on revérifie chaque minute, sans réseau
       // D'abord la connexion poussée par le relais; si elle ne s'ouvre pas, lecture aux 15 s comme avant.
       if (!noSocket) {

@@ -297,6 +297,37 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
 .news-meta b{color:var(--white);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:12px;background:var(--red);padding:2px 6px;margin-right:2px}
 .news-fail{margin:14px 0 0;padding:8px 10px;font-size:14px;font-weight:700;color:var(--white);background:var(--red);font-stretch:100%;letter-spacing:0}
 .news-note{margin:14px 0 0;font-size:13px;color:#aeb3e0;font-stretch:100%;letter-spacing:0}
+.news-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.news-hd .h{margin:0}
+.stamp{margin:0;font-size:13px;font-weight:700;line-height:1.3;color:#c3c8f2;text-align:right}
+.stamp b{color:var(--white);font-weight:800}
+.stamp-btn{display:block;margin:6px 0 0 auto;min-height:40px;padding:0 12px;border:0;border-radius:0;background:var(--white);color:var(--blue);font:inherit;font-weight:800;font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.stamp-btn:focus-visible{outline:3px solid var(--white);outline-offset:2px}
+.news-hd + .news-fail{margin:0 0 14px}
+/* Compte à rebours de la carte du prochain match */
+.cd{margin:20px 0 0;background:var(--blue);border-top:10px solid var(--white);border-bottom:10px solid var(--white);padding:14px 18px 16px}
+.cd .lbl{display:block;color:#c3c8f2}
+.cd>.lbl{margin-bottom:8px}
+.cd-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.cd-u{background:var(--zebra-blue);padding:6px 4px 5px;text-align:center}
+.cd-v{display:block;font-size:44px;line-height:1}
+.cd-u .lbl{margin-top:4px;font-size:10.5px;letter-spacing:.14em}
+.cd-now{display:block;font-size:40px;line-height:1}
+/* Tirer pour actualiser (accueil) : indicateur fixe; le rebond natif d'iOS reste tel quel.
+   contain : pas de rechargement natif de Chrome pour Android, rebond et effet de bord conservés. */
+:root:has(#hero-slot),:root:has(#hero-slot) body{overscroll-behavior-y:contain}
+.ptr{position:fixed;z-index:10;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translateX(-50%);margin:0;padding:10px 14px 9px;opacity:0;pointer-events:none;white-space:nowrap;
+  background:var(--white);color:var(--blue);font-weight:800;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+.ptr.on{opacity:1}
+.ptr.pull{background:linear-gradient(90deg,var(--pale) calc(var(--p,0) * 100%),var(--white) 0)}
+.ptr.ready,.ptr.fail{background:var(--white);color:var(--red)}
+.ptr.busy::before{content:"";display:inline-block;width:10px;height:10px;margin-right:9px;background:var(--red);vertical-align:0;animation:ptr-spin .8s linear infinite}
+@keyframes ptr-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){
+  .ptr.busy::before{animation:none}
+  .cd-row{grid-template-columns:repeat(3,1fr)}
+  .cd-s{display:none} /* pas de secondes qui défilent */
+}
 .faf{display:none}
 /* Focus clavier visible (clavier Bluetooth, accès complet au clavier d'iOS) */
 a:focus-visible{outline:3px solid var(--white);outline-offset:2px}
@@ -324,6 +355,7 @@ a:focus-visible{outline:3px solid var(--white);outline-offset:2px}
   .hero:has(>.faf)>.top{grid-column:1/-1}
   .hero:has(>.faf)>.kick{justify-self:start}
   .faf{display:block;grid-column:2!important;grid-row:2/span 5;align-self:center;margin-right:18px}
+  .hero:has(>.faf)>.cd{grid-column:1/-1}
   .faf-r{display:grid;grid-template-columns:1fr 120px 120px;gap:10px;align-items:baseline;padding:7px 10px;font-weight:700;font-size:16px}
   .faf-r:nth-child(odd):not(.faf-h){background:var(--zebra-red)}
   .faf-h{padding-bottom:6px}
