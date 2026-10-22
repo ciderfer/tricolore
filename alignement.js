@@ -8,7 +8,7 @@
   const SOURCE_LABEL = { roster: "Alignement", stats: "Statistiques" };
 
   const POS = { C: "Centre", L: "Ailier gauche", R: "Ailier droit", D: "Défenseur", G: "Gardien" };
-  const POS_SHORT = { C: "C", L: "AG", R: "AD", D: "D" };
+  const POS_BAR = { C: "Centre", L: "Ailier g.", R: "Ailier d.", D: "Défenseur" };
   const SIDE = { L: "gauche", R: "droite" };
   const shortName = (p) => `${loc(p.firstName).charAt(0)}. ${loc(p.lastName)}`;
   function header(d) {
@@ -59,6 +59,10 @@
 
   function gameTypeText(gt) { return gt === 3 ? "Séries" : gt === 1 ? "Préparatoire" : "Saison régulière"; }
 
+  // Patineurs : une barre par joueur (buts en rouge, passes en bleu, points au bout), attaquants ou défenseurs,
+  // à la même échelle. Toucher un joueur affiche son profil (radar) : chaque axe le compare au meilleur du CH
+  // à sa position. view garde l'état de l'affichage (dessiné par draw() une fois la page en place).
+  let view = null;
   function skaters(d) {
     const h = `<h2 class="h cond">Patineurs</h2>`;
     const s = d.stats;
@@ -66,12 +70,96 @@
     const list = s.skaters.filter((p) => fin(p.gamesPlayed) && p.gamesPlayed > 0)
       .sort((a, b) => b.points - a.points || b.goals - a.goals || a.gamesPlayed - b.gamesPlayed || loc(a.lastName).localeCompare(loc(b.lastName), "fr"));
     if (!list.length) return `<section class="blk white">${h}<p class="asof">Aucun match joué pour l’instant.</p></section>`;
-    const n = (v) => (fin(v) ? v : "—");
-    return `<section class="blk white">${h}<p class="tbl-sub lbl">${esc(gameTypeText(s.gameType))}</p><table class="stats sk">
-      <thead><tr><th>Joueur</th><th>PJ</th><th>B</th><th>A</th><th>PTS</th><th>+/-</th></tr></thead><tbody>
-      ${list.map((p) => `<tr><td>${nameCell(d, p)}<span class="ps">${esc(POS_SHORT[p.positionCode] || p.positionCode || "")}</span></td><td>${n(p.gamesPlayed)}</td><td>${n(p.goals)}</td><td>${n(p.assists)}</td><td class="pts">${n(p.points)}</td><td>${fin(p.plusMinus) ? signed(p.plusMinus) : "—"}</td></tr>`).join("")}
-      </tbody></table><p class="asof">PJ parties jouées · B buts · A passes · PTS points · +/- différentiel. Seuls les joueurs ayant joué sont listés.</p></section>`;
+    const groups = { f: list.filter((p) => p.positionCode !== "D"), d: list.filter((p) => p.positionCode === "D") };
+    const top = Math.max(...list.map((p) => (fin(p.points) ? p.points : 0)));
+    const roster = ["forwards", "defensemen", "goalies"].flatMap((k) => d.roster?.[k] || []);
+    view = { d, groups, grp: groups.f.length ? "f" : "d", sel: { f: groups.f[0]?.playerId, d: groups.d[0]?.playerId },
+      sc: Math.max(4, Math.ceil(top / 4) * 4), no: new Map(roster.map((p) => [p.id, p.sweaterNumber])) };
+    const seg = (g, label) => `<button type="button" data-grp="${g}"${groups[g].length ? "" : " disabled"}>${label}<span class="num">${groups[g].length}</span></button>`;
+    return `<section class="blk white sk-blk">${h}<p class="tbl-sub lbl">${esc(gameTypeText(s.gameType))}</p>
+      <div class="seg" role="group" aria-label="Position">${seg("f", "Attaquants")}${seg("d", "Défenseurs")}</div>
+      <p class="ch-key lbl"><span><i class="k-g"></i>Buts</span><span><i class="k-a"></i>Passes</span><span class="tot">Points</span></p>
+      <ul class="chart"></ul><div class="ch-scale" aria-hidden="true"></div>
+      <p class="asof">Touchez un joueur pour voir son profil. Classés par points, puis par buts. Même échelle pour attaquants et défenseurs. Seuls les joueurs ayant joué sont listés.</p></section>
+      <section class="prof" aria-live="polite"></section>`;
   }
+
+  const n = (v) => (fin(v) ? v : "—");
+  const toi = (sec) => (fin(sec) ? `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}` : "—");
+  const perGame = (p) => (fin(p.points) && p.gamesPlayed > 0 ? p.points / p.gamesPlayed : null);
+  function bar(p) {
+    const sel = p.playerId === view.sel[view.grp];
+    const ok = fin(p.goals) && fin(p.assists);
+    const w = (v) => (v / view.sc) * 100;
+    const fill = !ok ? `<span class="b-na">données absentes</span>`
+      : !(p.goals + p.assists) ? `<span class="b-na">aucun point</span>`
+      : `<span class="b-g" data-w="${w(p.goals)}">${p.goals && w(p.goals) >= 7 ? p.goals : ""}</span><span class="b-a" data-w="${w(p.assists)}">${p.assists && w(p.assists) >= 7 ? p.assists : ""}</span>`;
+    const label = `${loc(p.firstName)} ${loc(p.lastName)} : ${ok ? `${p.goals} buts, ${p.assists} passes, ` : ""}${n(p.points)} points en ${p.gamesPlayed} matchs`;
+    return `<li><button type="button" class="bar" data-id="${esc(p.playerId)}" aria-pressed="${sel}" aria-label="${esc(label)}">
+      <span class="b-no num">${esc(view.no.get(p.playerId) ?? "")}</span>
+      <span class="b-nm"><b>${esc(shortName(p))}</b><small>${esc(POS_BAR[p.positionCode] || p.positionCode || "")} · ${p.gamesPlayed} PJ</small></span>
+      <span class="b-tr">${fill}</span><span class="b-p num">${n(p.points)}</span></button></li>`;
+  }
+
+  // Radar : valeur du joueur / meilleure valeur du CH à sa position (attaquants ou défenseurs) sur chaque axe.
+  const AXES = [
+    ["Buts", (p) => p.goals, (p) => n(p.goals)],
+    ["Passes", (p) => p.assists, (p) => n(p.assists)],
+    ["Tirs", (p) => p.shots, (p) => n(p.shots)],
+    ["Temps de glace", (p) => p.avgTimeOnIcePerGame, (p) => toi(p.avgTimeOnIcePerGame)],
+    ["Pts / match", perGame, (p) => (fin(perGame(p)) ? perGame(p).toFixed(2).replace(".", ",") : "—")],
+  ];
+  function profile() {
+    const list = view.groups[view.grp], p = list.find((x) => x.playerId === view.sel[view.grp]);
+    if (!p) return "";
+    const N = AXES.length, cx = 160, cy = 128, r = 88;
+    const pt = (i, f) => { const a = -Math.PI / 2 + (i * 2 * Math.PI) / N; return [cx + Math.cos(a) * r * f, cy + Math.sin(a) * r * f]; };
+    const pts = (fs) => fs.map((f, i) => pt(i, f).map((v) => v.toFixed(1)).join(",")).join(" ");
+    const rings = [1, 0.75, 0.5, 0.25].map((f, k) => `<polygon class="ring${k % 2}" points="${pts(AXES.map(() => f))}"/>`).join("");
+    const vals = AXES.map(([, get]) => {
+      const v = get(p), best = Math.max(0, ...list.map(get).filter(fin));
+      return fin(v) && best > 0 ? Math.max(0.03, Math.max(0, v) / best) : 0.03;
+    });
+    const dots = vals.map((f, i) => { const [x, y] = pt(i, f); return `<rect class="dot" x="${(x - 3).toFixed(1)}" y="${(y - 3).toFixed(1)}" width="6" height="6"/>`; }).join("");
+    const labels = AXES.map(([name, , show], i) => {
+      const [x, y] = pt(i, 1.2);
+      const anc = Math.abs(x - cx) < 5 ? "middle" : x > cx ? "start" : "end";
+      const dy = y < cy - 40 ? -14 : y > cy + 40 ? 4 : -6;
+      return `<text x="${x.toFixed(1)}" y="${(y + dy).toFixed(1)}" text-anchor="${anc}">${name}</text><text class="v" x="${x.toFixed(1)}" y="${(y + dy + 16).toFixed(1)}" text-anchor="${anc}">${esc(show(p))}</text>`;
+    }).join("");
+    const who = view.grp === "f" ? "attaquant" : "défenseur";
+    const name = `${loc(p.firstName)} ${loc(p.lastName)}`;
+    const missing = AXES.filter(([, get]) => !fin(get(p))).map(([a]) => a);
+    const linked = view.no.has(p.playerId);
+    const no = view.no.get(p.playerId);
+    return `<span class="lbl">Profil du joueur</span>
+      <div class="prof-hd"><span class="prof-no num">${fin(no) ? no : ""}</span><h3 class="prof-nm cond">${esc(name)}<small>${esc(POS[p.positionCode] || p.positionCode || "")} · ${p.gamesPlayed} match${p.gamesPlayed > 1 ? "s" : ""} joué${p.gamesPlayed > 1 ? "s" : ""}</small></h3></div>
+      <svg class="radar" viewBox="0 0 320 262" role="img" aria-label="Profil de ${esc(name)} comparé au meilleur ${who} du CH sur chaque axe">${rings}<polygon class="shape" points="${pts(vals)}"/>${dots}${labels}</svg>
+      <div class="pgrid"><div><div class="lbl">Points</div><div class="v num">${n(p.points)}</div></div><div><div class="lbl">+/−</div><div class="v num">${signed(p.plusMinus)}</div></div><div><div class="lbl">Buts en A.N.</div><div class="v num">${n(p.powerPlayGoals)}</div></div></div>
+      <p class="prof-note">Le bord du radar : le meilleur ${who} du CH sur cet axe. Temps de glace : moyenne par match.${missing.length ? ` Donnée absente de la LNH : ${esc(missing.join(", "))} (au centre).` : ""}</p>
+      ${linked ? `<a class="more" href="joueur.html?id=${encodeURIComponent(p.playerId)}">Fiche de ${esc(loc(p.lastName))} ›</a>` : ""}`;
+  }
+
+  function draw() {
+    const blk = document.querySelector(".sk-blk");
+    if (!blk || !view) return;
+    blk.querySelector(".chart").innerHTML = view.groups[view.grp].map(bar).join("");
+    // Largeurs par le CSSOM (permis par la CSP, contrairement aux attributs style="").
+    blk.querySelectorAll("[data-w]").forEach((el) => { el.style.width = `${el.dataset.w}%`; });
+    blk.querySelector(".ch-scale").innerHTML = `<div>${[0, 1, 2, 3, 4].map((k) => `<span>${(view.sc * k) / 4}</span>`).join("")}</div>`;
+    blk.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.grp === view.grp)));
+    document.querySelector(".prof").innerHTML = profile();
+  }
+  document.getElementById("app").addEventListener("click", (e) => {
+    const seg = e.target.closest(".seg button"), b = e.target.closest(".bar");
+    if (seg) { view.grp = seg.dataset.grp; draw(); }
+    if (!b) return;
+    view.sel[view.grp] = Number(b.dataset.id);
+    draw();
+    document.querySelector(`.bar[data-id="${b.dataset.id}"]`)?.focus();
+    const prof = document.querySelector(".prof"), top = prof.getBoundingClientRect().top;
+    if (top < 0 || top > innerHeight * 0.6) prof.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  });
 
   function goalies(d) {
     const h = `<h2 class="h cond">Gardiens</h2>`;
@@ -91,6 +179,7 @@
   T.load(Object.keys(SOURCE_LABEL)).then((d) => {
     const parts = [() => header(d), () => leaders(d), () => roster(d), () => sleeve, () => skaters(d), () => goalies(d)];
     document.getElementById("app").innerHTML = T.sections(parts);
+    draw();
     const failed = Object.keys(SOURCE_LABEL).filter((n) => d.errors[n]).map((n) => SOURCE_LABEL[n]);
     document.getElementById("foot").innerHTML = T.footer(d.meta, d.errors.meta, failed);
   });

@@ -78,14 +78,15 @@ Page `calendrier.html` (script `calendrier.js`), onglet « Calendrier ». Elle l
 Page `alignement.html` (script `alignement.js`), accessible par l’onglet « Alignement ».
 
 - `data/roster.json` : `/v1/roster/MTL/current` (numéro, nom, position, date de naissance, main).
-- `data/stats.json` : `/v1/club-stats/MTL/now` (patineurs : PJ, B, A, PTS, +/- ; gardiens : PJ, V, D, DP, %ARR, MOY).
+- `data/stats.json` : `/v1/club-stats/MTL/now` (patineurs : PJ, B, A, PTS, +/-, tirs, buts en A.N., temps de glace moyen ; gardiens : PJ, V, D, DP, %ARR, MOY).
+- Patineurs en graphique à barres (CSS, sans bibliothèque) : une barre par joueur, buts en rouge et passes en bleu, points au bout; attaquants ou défenseurs, à la même échelle. Toucher un joueur affiche son profil : radar SVG (buts, passes, tirs, temps de glace, points par match), chaque axe comparé au meilleur du CH à la même position, et lien vers sa fiche s’il est dans l’alignement actuel. Une donnée absente est affichée « — » et placée au centre. Les gardiens restent en tableau.
 - Les liens vers les photos des joueurs sont retirés des fichiers : aucune photo n’est affichée.
 - L’âge est calculé à la date du jour (heure de l’Est). Les meneurs (points, buts, passes) sont calculés à partir de `stats.json`. Les égalités sont toutes nommées (deux noms au plus, puis « +N »).
 - Si une source est en échec, la section concernée affiche un message d’erreur et le pied de page la nomme.
 
 ## Fiches de joueurs
 
-Page `joueur.html?id=NUMÉRO` (script `joueur.js`). Chaque nom de l’alignement (et des tableaux de statistiques, pour les joueurs de l’alignement actuel) y mène.
+Page `joueur.html?id=NUMÉRO` (script `joueur.js`). Chaque nom de l’alignement y mène, tout comme le tableau des gardiens et le profil d’un patineur (pour les joueurs de l’alignement actuel).
 
 - `data/joueurs/<id>.json` : `/v1/player/<id>/landing`, écrit par la tâche de données (`scripts/joueurs.mjs`) pour chaque joueur de `roster.json`. Seuls les champs affichés sont gardés (aucun lien de photo). Un fichier n’est réécrit que s’il change ; la fiche d’un joueur qui quitte l’alignement est supprimée.
 - La page affiche : numéro, nom, position, âge, main, lieu de naissance, taille et poids (métrique d’abord), statistiques de la saison en cours dans la LNH, 5 derniers matchs et totaux en carrière dans la LNH.
