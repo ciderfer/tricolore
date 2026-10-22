@@ -51,6 +51,32 @@ body{margin:0;background:var(--red);color:var(--white);font:500 18px/1.35 Archiv
 .tabs{display:flex;gap:6px;background:var(--blue);padding:calc(8px + env(safe-area-inset-top)) 10px 0}
 .tabs a{color:#c3c8f2;text-decoration:none;font-stretch:62%;font-weight:900;font-size:21px;text-transform:uppercase;letter-spacing:.03em;padding:4px 8px 9px}
 .tabs a[aria-current="page"]{color:var(--white);background:var(--red)}
+/* Téléphone : bande d'onglets blanche collante, soulignement rouge qui suit le doigt (navigation.js), glissement entre pages */
+.tabs-ul,.peek{display:none}
+@media (max-width:1023px){
+  html,body{overflow-x:clip}
+  .tabs{position:sticky;top:0;z-index:6;gap:0;background:linear-gradient(var(--blue) 0 env(safe-area-inset-top),var(--white) 0);padding:env(safe-area-inset-top) 0 0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain;-webkit-tap-highlight-color:transparent}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs a{flex:none;color:rgba(25,33,104,.45);font-size:19px;padding:12px 13px 11px}
+  .tabs a:first-child{padding-left:18px}
+  .tabs a:last-child{padding-right:18px}
+  .tabs a[aria-current="page"]{color:var(--blue);background:none}
+  .tabs:not(.js) a[aria-current="page"]{box-shadow:inset 0 -4px var(--red)}
+  .tabs a:focus-visible{outline:3px solid var(--red);outline-offset:-3px}
+  .tabs.fr{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+  .tabs.fl{-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px);mask-image:linear-gradient(90deg,transparent,#000 28px)}
+  .tabs.fl.fr{-webkit-mask-image:linear-gradient(90deg,transparent,#000 28px calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,transparent,#000 28px calc(100% - 28px),transparent)}
+  .tabs-ul{display:block;position:absolute;left:0;bottom:0;height:4px;background:var(--red);pointer-events:none}
+  .tabs-ul.anim,.swipe-anim{transition:transform .28s cubic-bezier(.2,.8,.2,1),width .28s cubic-bezier(.2,.8,.2,1)}
+  .peek{display:block;position:fixed;left:0;right:0;bottom:0;z-index:4;background:var(--red);color:var(--white);padding:22px 18px;font-weight:900;font-stretch:62%;font-size:34px;line-height:1;text-transform:uppercase;letter-spacing:-.005em;pointer-events:none}
+  .peek.prev{text-align:right}
+  .peek[hidden]{display:none}
+  .arrive-r main,.arrive-r #foot{animation:arrive-r .28s cubic-bezier(.2,.8,.2,1)}
+  .arrive-l main,.arrive-l #foot{animation:arrive-l .28s cubic-bezier(.2,.8,.2,1)}
+}
+@keyframes arrive-r{from{transform:translateX(56px);opacity:.5}}
+@keyframes arrive-l{from{transform:translateX(-56px);opacity:.5}}
+@media (prefers-reduced-motion:reduce){.tabs-ul.anim,.swipe-anim{transition:none}.arrive-r main,.arrive-r #foot,.arrive-l main,.arrive-l #foot{animation:none}}
 /* 320 px (iPhone avec « Zoom de l'affichage ») : les trois onglets dépassaient de l'écran */
 @media (max-width:359px){.tabs a{font-size:18px;padding-left:6px;padding-right:6px}}
 .tabs ~ main .hero{padding-top:14px}
