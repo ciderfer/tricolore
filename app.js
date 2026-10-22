@@ -332,15 +332,17 @@
     document.body.append(ind);
     document.getElementById("app").addEventListener("click", (e) => { if (e.target.closest(".stamp-btn")) refresh(); });
     const PULL = 80; // px de glissement du doigt
-    let y0 = null, ready = false;
+    let y0 = null, x0 = 0, ready = false;
     addEventListener("touchstart", (e) => {
       y0 = !busy && scrollY <= 0 && e.touches.length === 1 ? e.touches[0].clientY : null;
+      x0 = e.touches[0].clientX;
       ready = false;
     }, { passive: true });
     addEventListener("touchmove", (e) => {
       if (y0 === null) return;
       const dy = e.touches[0].clientY - y0;
-      if (scrollY > 0 || dy < 0) { y0 = null; show("", ""); return; } // on fait défiler la page, pas actualiser
+      // on fait défiler la page, ou on glisse vers la page voisine (navigation.js) : pas d'actualisation
+      if (scrollY > 0 || dy < 0 || Math.abs(e.touches[0].clientX - x0) > Math.max(dy, 10)) { y0 = null; show("", ""); return; }
       if (dy < 12) return;
       ready = dy >= PULL;
       show(ready ? "Relâcher pour actualiser" : "Tirer pour actualiser", ready ? "ready" : "pull");
