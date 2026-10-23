@@ -23,11 +23,12 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 | `commun.js` | Fonctions communes aux 5 pages (échappement, dates, chargement de `data/` avec `meta.json`, pied de page), chargé avant le script de chaque page |
 | `scripts/fetch-data.mjs` | Récupère les données (Node 20, sans dépendance) |
 | `scripts/news.mjs` | Sources de nouvelles et filtre « Canadien » |
-| `data/` | `schedule.json`, `scoreboard.json`, `standings.json`, `news.json`, `meta.json` |
+| `scripts/fetch-injuries.mjs`, `blesses.js`, `blesses.css` | Blessés du CH (source ESPN non officielle) : récupération par la tâche de données, section de la page Alignement |
+| `data/` | `schedule.json`, `scoreboard.json`, `standings.json`, `news.json`, `meta.json`, `injuries.json` (blessés, ESPN) |
 | `.github/workflows/data.yml` | Mise à jour des données aux 15 minutes (et sur demande) |
 | `.github/workflows/pages.yml` | Déploiement sur GitHub Pages depuis `main`. Ajoute `?v=<empreinte>` aux JS et CSS dans le HTML (empreinte du contenu du code) pour que les navigateurs ne gardent pas un ancien fichier après un déploiement |
 | `.github/workflows/surveillance.yml`, `scripts/surveillance.mjs`, `scripts/etat.mjs` | Surveillance des données : ouvre une issue GitHub (donc un courriel) si le site n’a pas vérifié ses données depuis 90 min ou si une source de la LNH est en échec depuis plus de 2 h, et la ferme au retour à la normale. Voir « Surveillance » plus bas |
-| `tests/` | Tests de la logique pure (surveillance, dernier but) : `node --test tests/*.test.mjs` |
+| `tests/` | Tests de la logique pure (surveillance, dernier but, blessés) : `node --test tests/*.test.mjs` |
 | `.github/dependabot.yml` | Mises à jour hebdomadaires des actions GitHub, fixées par SHA dans les workflows |
 | `worker/` | Proxy Cloudflare pour le pointage en direct, minuterie chaque minute (tâche de données aux 15 minutes, secret `GH_TOKEN` : jeton GitHub limité à ce repo, permission Actions en écriture; alertes de match) et envoi Web Push (`alertes.js`, `push.js`; tests : `npm test`) |
 | `alertes.html`, `alertes.js`, `alertes.css`, `sw.js` | Page « Alertes de match » (lien au bas des pages) et service worker des notifications |
@@ -36,6 +37,7 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 
 ```sh
 node scripts/fetch-data.mjs
+node scripts/fetch-injuries.mjs
 python3 -m http.server 8000
 # puis ouvrir http://localhost:8000
 ```
@@ -83,6 +85,11 @@ Page `alignement.html` (script `alignement.js`), accessible par l’onglet « Al
 - Les liens vers les photos des joueurs sont retirés des fichiers : aucune photo n’est affichée.
 - L’âge est calculé à la date du jour (heure de l’Est). Les meneurs (points, buts, passes) sont calculés à partir de `stats.json`. Les égalités sont toutes nommées (deux noms au plus, puis « +N »).
 - Si une source est en échec, la section concernée affiche un message d’erreur et le pied de page la nomme.
+- **Blessés** (entre les meneurs et l’alignement, et pastille « Blessé » dans l’alignement) : `data/injuries.json`, écrit par `scripts/fetch-injuries.mjs` (étape de `data.yml` après les données LNH, `continue-on-error` : une panne d’ESPN ne bloque jamais la LNH) à partir de l’API publique **non officielle** d’ESPN (`site.api.espn.com/.../hockey/nhl/injuries`, équipe `10`), sans clé. Elle peut changer ou disparaître sans préavis; à utiliser pour un site de partisan non commercial seulement.
+  - Champs structurés seulement : nom, position, statut (« Liste des blessés », « Au jour le jour », « Absent »), type de blessure (« Haut du corps », « Bas du corps », « Non divulguée »; sinon le terme d’ESPN), date de retour. Jamais les commentaires rédigés d’ESPN.
+  - Les dates de retour sont des **estimations d’ESPN**, pas des annonces du club : la page le dit.
+  - Jumelage avec `roster.json` par nom de famille et initiale du prénom (numéro et lien vers la fiche); un joueur absent de l’alignement LNH s’affiche sans numéro.
+  - En cas d’échec, l’ancien fichier est gardé. Le fichier est réécrit si la liste change, ou aux 45 min (`fetchedAt`). S’il manque ou si `fetchedAt` a plus de 3 jours, la section affiche un message au lieu de la liste.
 
 ## Fiches de joueurs
 
