@@ -1,11 +1,12 @@
 // Tricolore — page Alignement et statistiques.
-// Lit data/roster.json et data/stats.json (écrits par scripts/fetch-data.mjs depuis l'API publique de la LNH).
+// Lit data/roster.json et data/stats.json (écrits par scripts/fetch-data.mjs depuis l'API publique de la LNH)
+// et data/injuries.json (scripts/fetch-injuries.mjs, ESPN; section affichée par blesses.js).
 // Règle d'or : aucune donnée inventée. Si une source manque, on affiche un message clair.
 (function () {
   "use strict";
   const { esc, loc, fin, pct, gaa, signed, age, WORDMARK, errBox } = T;
 
-  const SOURCE_LABEL = { roster: "Alignement", stats: "Statistiques" };
+  const SOURCE_LABEL = { roster: "Alignement", stats: "Statistiques", injuries: "Blessés" };
 
   const POS = { C: "Centre", L: "Ailier gauche", R: "Ailier droit", D: "Défenseur", G: "Gardien" };
   const POS_BAR = { C: "Centre", L: "Ailier g.", R: "Ailier d.", D: "Défenseur" };
@@ -33,6 +34,7 @@
   }
 
   function roster(d) {
+    const hurt = TB.injuredIds(d.injuries, d.roster, Date.now());
     const h = `<h2 class="h cond">Alignement</h2>`;
     const r = d.roster;
     if (!r || !Array.isArray(r.forwards)) return `<section class="blk">${h}${errBox("Alignement", d.errors.roster || "données absentes")}</section>`;
@@ -43,7 +45,7 @@
         const hand = SIDE[p.shootsCatches] ? `${p.positionCode === "G" ? "Attrape" : "Lance"} de la ${SIDE[p.shootsCatches]}` : "";
         const info = [POS[p.positionCode] || p.positionCode, a != null ? `${a} ans` : "", hand].filter(Boolean).join(" · ");
         return `<li class="pl"><span class="pl-no num">${fin(p.sweaterNumber) ? p.sweaterNumber : "—"}</span>
-          <a class="pl-id pl-link" href="joueur.html?id=${encodeURIComponent(p.id)}"><span class="pl-name cond">${esc(loc(p.firstName))} ${esc(loc(p.lastName))}</span><span class="pl-info">${esc(info)}</span></a></li>`;
+          <a class="pl-id pl-link" href="joueur.html?id=${encodeURIComponent(p.id)}"><span class="pl-name cond">${esc(loc(p.firstName))} ${esc(loc(p.lastName))}</span><span class="pl-info">${esc(info)}${hurt.has(p.id) ? `<b class="pl-inj">Blessé</b>` : ""}</span></a></li>`;
       }).join("");
       return `<h3 class="grp lbl">${title} <span>${list.length}</span></h3><ul class="roster">${rows}</ul>`;
     };
@@ -177,7 +179,7 @@
 
   const sleeve = `<div class="sleeve" aria-hidden="true"></div>`;
   T.load(Object.keys(SOURCE_LABEL)).then((d) => {
-    const parts = [() => header(d), () => leaders(d), () => roster(d), () => sleeve, () => skaters(d), () => goalies(d)];
+    const parts = [() => header(d), () => leaders(d), () => TB.section(d.injuries, d.roster, Date.now(), d.errors.injuries), () => roster(d), () => sleeve, () => skaters(d), () => goalies(d)];
     document.getElementById("app").innerHTML = T.sections(parts);
     draw();
     const failed = Object.keys(SOURCE_LABEL).filter((n) => d.errors[n]).map((n) => SOURCE_LABEL[n]);

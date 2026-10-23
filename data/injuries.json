@@ -1,0 +1,68 @@
+{
+ "source": "ESPN",
+ "url": "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/injuries",
+ "fetchedAt": "2026-10-23T23:09:21.511Z",
+ "updatedAt": "2026-10-23T23:09:21.511Z",
+ "players": [
+  {
+   "name": "Nick Suzuki",
+   "firstName": "Nick",
+   "lastName": "Suzuki",
+   "pos": "C",
+   "status": "Out",
+   "type": "Upper Body",
+   "returnDate": "2026-11-18",
+   "updated": "2026-10-22T15:30Z"
+  },
+  {
+   "name": "Florian Xhekaj",
+   "firstName": "Florian",
+   "lastName": "Xhekaj",
+   "pos": "LW",
+   "status": "Injured Reserve",
+   "type": "Lower Body",
+   "returnDate": "2026-10-31",
+   "updated": "2026-10-17T17:08Z"
+  },
+  {
+   "name": "Sam Montembeault",
+   "firstName": "Sam",
+   "lastName": "Montembeault",
+   "pos": "G",
+   "status": "Injured Reserve",
+   "type": "Lower Body",
+   "returnDate": "2026-10-25",
+   "updated": "2026-10-10T21:20Z"
+  },
+  {
+   "name": "Ivan Demidov",
+   "firstName": "Ivan",
+   "lastName": "Demidov",
+   "pos": "RW",
+   "status": "Injured Reserve",
+   "type": "Lower Body",
+   "returnDate": "2026-10-31",
+   "updated": "2026-10-06T21:16Z"
+  },
+  {
+   "name": "Bryce Pickford",
+   "firstName": "Bryce",
+   "lastName": "Pickford",
+   "pos": "D",
+   "status": "Injured Reserve",
+   "type": "Undisclosed",
+   "returnDate": "2026-10-31",
+   "updated": "2026-09-29T16:39Z"
+  },
+  {
+   "name": "Lucas Condotta",
+   "firstName": "Lucas",
+   "lastName": "Condotta",
+   "pos": "LW",
+   "status": "Injured Reserve",
+   "type": "Undisclosed",
+   "returnDate": "2026-10-31",
+   "updated": "2026-09-29T16:38Z"
+  }
+ ]
+}
