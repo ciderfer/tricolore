@@ -9,20 +9,26 @@
 // Lectures : « landing » aux 5 s en direct (15 s avant le match, 60 s s'il est loin); « boxscore » et « right-rail »
 // chaque minute, seulement si une feuille de match est ouverte (étiquette « all »). La LNH met ses réponses en cache
 // 16 s : 5 s ici ajoutent au plus 5 s de délai, contre 15 s + 5 s de cache avec l'ancienne lecture du navigateur.
-// Messages : {"part","at","body"} (body : JSON de la LNH tel quel) ou {"part","error"}. Envoyés seulement quand
-// ils changent, plus {"part":"ping"} après 25 s sans rien. Match fini : dernier envoi complet, puis fermeture (code 1000). Pas un match du Canadien : 4404.
+// Messages : {"part","at","body"} (body : JSON de la LNH tel quel; at : heure de la lecture) ou {"part","error"}.
+// Envoyés seulement quand ils changent, plus {"part":"ping"} après 25 s sans rien.
+// À la connexion : ce qu'on a, seulement si c'est encore frais (lu il y a au plus un intervalle de lecture). Sinon
+// (alarme arrêtée faute de partisans, objet resté en mémoire), on lit la LNH d'abord : sans ça, le premier pointage
+// affiché pouvait dater de la dernière lecture (30 s, voire des minutes) jusqu'à l'alarme suivante. Match fini : dernier envoi complet, puis fermeture (code 1000). Pas un match du Canadien : 4404.
 const UPSTREAM = "https://api-web.nhle.com";
 const LIVE = new Set(["LIVE", "CRIT"]);
 const DONE = new Set(["OFF", "FINAL"]);
 const EVERY = { LIVE: 5_000, CRIT: 5_000, PRE: 15_000 }; // autre état (FUT) : 60 s
 const SLOW_MS = 60_000;
 const SLOW = ["boxscore", "right-rail"];
+const MARGIN_MS = 1_000; // retard toléré d'une alarme avant de juger une lecture périmée
 
 export class Direct {
   constructor(ctx, env) {
     this.ctx = ctx; this.env = env;
-    this.sent = {};   // dernier message envoyé, par partie (texte)
-    this.keys = {};   // contenu de ce message (corps LNH ou erreur) : on n'envoie que ce qui change
+    this.keys = {};   // dernier contenu envoyé, par partie (corps LNH ou « !erreur ») : on n'envoie que ce qui change
+    this.readAt = {}; // heure de la dernière lecture, par partie (même sans changement)
+    this.state = null; // dernier gameState lu
+    this.waiting = new Map(); // nouvelles connexions qui attendent une lecture fraîche → parties encore dues
     this.slowAt = 0;
     this.lastSend = Date.now();
     this.polling = null;
@@ -37,12 +43,38 @@ export class Direct {
     const [client, server] = [pair[0], pair[1]];
     const all = url.searchParams.get("parts") === "all";
     this.ctx.acceptWebSocket(server, [all ? "all" : "landing"]);
-    // Ce qu'on a déjà, tout de suite; sinon la lecture qui suit l'enverra à tout le monde.
-    for (const [part, msg] of Object.entries(this.sent)) if (all || part === "landing") server.send(msg);
-    const fresh = this.sent.landing && (!all || this.sent.boxscore);
-    if (!fresh) { if (all) this.slowAt = 0; this.ctx.waitUntil(this.poll()); }
+    this.ctx.waitUntil(this.welcome(server, all));
     if ((await this.ctx.storage.getAlarm()) == null) await this.ctx.storage.setAlarm(Date.now() + EVERY.LIVE);
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  // Premier envoi à une nouvelle connexion. Frais : ce qu'on a, tout de suite. Périmé ou absent : une lecture
+  // d'abord (partagée avec l'alarme si elle tombe en même temps); send() donne alors à ce partisan chaque partie
+  // lue, même inchangée, avant une éventuelle fermeture (match fini). Le reste (non relu) suit, s'il existe.
+  async welcome(ws, all) {
+    const parts = new Set(all ? ["landing", ...SLOW] : ["landing"]);
+    if (!this.isFresh(Date.now(), all)) {
+      if (all && this.keys.boxscore === undefined) this.slowAt = 0;
+      this.waiting.set(ws, parts);
+      try { await this.poll(); } finally { this.waiting.delete(ws); }
+    }
+    for (const p of parts) if (this.keys[p] !== undefined) this.sendTo(ws, p);
+  }
+
+  isFresh(now, all) {
+    const every = EVERY[this.state] ?? SLOW_MS;
+    if (!(now - (this.readAt.landing ?? -Infinity) <= every + MARGIN_MS)) return false;
+    return !all || now - (this.readAt.boxscore ?? -Infinity) <= SLOW_MS + MARGIN_MS;
+  }
+
+  sendTo(ws, part) {
+    const msg = this.msg(part, this.keys[part], this.readAt[part]);
+    try { ws.send(msg); } catch { /* fermée */ }
+  }
+
+  msg(part, key, at) {
+    return key.startsWith("!") ? JSON.stringify({ part, error: key.slice(1) })
+      : `{"part":"${part}","at":"${new Date(at).toISOString()}","body":${key}}`;
   }
 
   async alarm() {
@@ -71,6 +103,7 @@ export class Direct {
           return 0;
         }
         state = j.gameState;
+        this.state = state;
       }
     }
     this.send("landing", land, now);
@@ -98,10 +131,12 @@ export class Direct {
   // Envoie une partie à ceux qui la suivent, seulement si elle a changé (l'heure de lecture n'en fait pas partie).
   send(part, { text, error }, now, tag) {
     const key = text ?? `!${error}`;
-    if (this.keys[part] === key) return;
-    const msg = text ? `{"part":"${part}","at":"${new Date(now).toISOString()}","body":${text}}` : JSON.stringify({ part, error });
+    this.readAt[part] = now;
+    const changed = this.keys[part] !== key;
     this.keys[part] = key;
-    this.sent[part] = msg;
+    for (const [ws, due] of this.waiting) if (due.delete(part) && !changed) this.sendTo(ws, part);
+    if (!changed) return;
+    const msg = this.msg(part, key, now);
     this.lastSend = now;
     for (const ws of this.ctx.getWebSockets(tag)) { try { ws.send(msg); } catch { /* connexion fermée entre-temps */ } }
   }
