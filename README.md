@@ -32,6 +32,7 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 | `.github/dependabot.yml` | Mises à jour hebdomadaires des actions GitHub, fixées par SHA dans les workflows |
 | `worker/` | Proxy Cloudflare pour le pointage en direct, minuterie chaque minute (tâche de données aux 15 minutes, secret `GH_TOKEN` : jeton GitHub limité à ce repo, permission Actions en écriture; alertes de match) et envoi Web Push (`alertes.js`, `push.js`; tests : `npm test`) |
 | `alertes.html`, `alertes.js`, `alertes.css`, `sw.js` | Page « Alertes de match » (lien au bas des pages) et service worker des notifications |
+| `horsligne.js` | Sur chaque page : enregistre `sw.js` et affiche le bandeau « Hors ligne : données en mémoire du … » |
 
 ## En local
 
@@ -104,7 +105,11 @@ Page `joueur.html?id=NUMÉRO` (script `joueur.js`). Chaque nom de l’alignement
 - Icône originale (pas le logo de la LNH ni du CH), façon numéro de chandail cousu : « T » de la police Graduate en bleu, contours blanc / rouge / blanc, sur le rouge du chandail avec la bande blanc/bleu/blanc. Le T est un tracé (aucune police requise). Sources SVG dans `icons/`, générées par `scripts/icones.py`; les petits favicons sont simplifiés.
 - `manifest.webmanifest` : nom « Tricolore », `display: standalone`, `start_url` et `scope` `/tricolore/`.
 - Sur iPhone : Safari → Partager → « Sur l’écran d’accueil ». Barre d’état translucide au-dessus de la bande bleue.
-- Service worker `sw.js` (portée `/tricolore/`) seulement pour les alertes de match : `push` et `notificationclick`, aucun gestionnaire `fetch`, donc aucune mise en cache; les pages lisent toujours les données fraîches.
+- Service worker `sw.js` (portée `/tricolore/`, enregistré par `horsligne.js` sur chaque page) : alertes de match (`push`, `notificationclick`) et site hors ligne.
+  - Installation : pages, CSS, JS, polices, icônes et `data/*.json` gardés en mémoire (cache `tricolore-v1`; l'activation efface les anciennes versions). Ajouter tout nouveau fichier à `SHELL` ou `DATA` dans `sw.js` (un test le vérifie).
+  - Pages et `data/*.json` : réseau d'abord; sans réseau (ou après 4 s), la copie en mémoire, avec le bandeau « Hors ligne : données en mémoire du … (heure de l’Est). Elles peuvent être périmées. » Jamais une copie présentée comme actuelle.
+  - JS et CSS `?v=` : la version exacte en mémoire, sinon le réseau. Le relais Cloudflare, l'API LNH et le WebSocket du direct ne passent jamais par la mémoire.
+  - Première visite : il faut du réseau (rien n'est encore en mémoire).
 - Politique de sécurité du contenu (balise `Content-Security-Policy` dans chaque page) : scripts, styles et polices du site seulement, connexions au site et au Worker (et à `localhost` pour les tests). Aucun style ni script en ligne.
 
 ## Alertes de match (iPhone)
