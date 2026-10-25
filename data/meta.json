@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-10-25T17:45:30.705Z",
-  "checkedAt": "2026-10-25T20:15:30.342Z",
+  "updatedAt": "2026-10-25T20:30:38.105Z",
+  "checkedAt": "2026-10-25T20:30:38.105Z",
   "sources": {
     "schedule": {
       "ok": true,
@@ -33,8 +33,9 @@
       "name": "La Presse"
     },
     "jdm": {
-      "ok": true,
-      "name": "Journal de Montréal"
+      "ok": false,
+      "name": "Journal de Montréal",
+      "error": "fetch failed"
     },
     "radiocanada": {
       "ok": true,
