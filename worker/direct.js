@@ -7,8 +7,8 @@
 // Les connexions sont « hibernables » (ctx.acceptWebSocket) : pas de durée facturée entre deux lectures.
 //
 // Lectures : « landing » aux 5 s en direct (15 s avant le match, 60 s s'il est loin); « boxscore » et « right-rail »
-// chaque minute, seulement si une feuille de match est ouverte (étiquette « all »). La LNH met ses réponses en cache
-// 16 s : 5 s ici ajoutent au plus 5 s de délai, contre 15 s + 5 s de cache avec l'ancienne lecture du navigateur.
+// chaque minute, seulement si une feuille de match est ouverte (étiquette « all »). En direct, chaque lecture passe
+// outre la copie Cloudflare de la LNH (voir url()) : au plus 5 s de délai, au lieu d'environ 20 s.
 // Messages : {"part","at","body"} (body : JSON de la LNH tel quel; at : heure de la lecture) ou {"part","error"}.
 // Envoyés seulement quand ils changent, plus {"part":"ping"} après 25 s sans rien.
 // À la connexion : ce qu'on a, seulement si c'est encore frais (lu il y a au plus un intervalle de lecture). Sinon
@@ -119,9 +119,19 @@ export class Direct {
     return EVERY[state] ?? 60_000;
   }
 
+  // En direct (ou état encore inconnu), la LNH sert sa copie Cloudflare jusqu'à 19 s (max-age=19, cf-cache-status HIT) :
+  // lire aux 5 s ne servait à rien. Un paramètre ?t= unique contourne cette copie (cf-cache-status MISS);
+  // vérifié depuis un Worker : cache: "no-store" et cf.cacheTtl = 0 n'y changent rien (toujours HIT). Une seule
+  // lecture aux 5 s par match pour tous les partisans (et boxscore/right-rail chaque minute) : la charge reste minime.
+  // Avant le match (PRE, FUT) et après : copie de la LNH, comme avant.
+  url(part, now = Date.now()) {
+    const u = `${this.env.NHL_API || UPSTREAM}/v1/gamecenter/${this.gameId}/${part}`;
+    return this.state == null || LIVE.has(this.state) ? `${u}?t=${now}` : u;
+  }
+
   async get(part) {
     try {
-      const r = await fetch(`${this.env.NHL_API || UPSTREAM}/v1/gamecenter/${this.gameId}/${part}`, {
+      const r = await fetch(this.url(part), {
         headers: { "user-agent": "tricolore (site de partisan; github.com/ciderfer/tricolore)" } });
       if (!r.ok) return { error: `LNH : HTTP ${r.status}` };
       return { text: await r.text() };
