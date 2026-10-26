@@ -12,10 +12,11 @@ function ctx(socks) {
 }
 let net;
 beforeEach(() => {
-  net = { landing: stage(1, "LIVE").landing, calls: [], fail: false };
-  globalThis.fetch = async (url) => {
-    const part = String(url).split("/").pop();
+  net = { landing: stage(1, "LIVE").landing, calls: [], urls: [], inits: [], fail: false };
+  globalThis.fetch = async (url, init) => {
+    const part = String(url).split("?")[0].split("/").pop();
     net.calls.push(part);
+    net.urls.push(String(url)); net.inits.push(init);
     if (net.fail) return new Response("", { status: 503 });
     return Response.json(part === "landing" ? net.landing : { part, id: GAME_ID });
   };
@@ -221,4 +222,21 @@ test("fetch() (connexion réelle) : le premier envoi passe par welcome, avec lec
     assert.equal(socks[0].got.length, 1); assert.equal(socks[0].got[0].body.id, GAME_ID);
     assert.ok(alarm > 0);
   } finally { globalThis.Response = RealResponse; delete globalThis.WebSocketPair; }
+});
+
+test("en direct : chaque lecture passe outre la copie Cloudflare de la LNH (?t= unique); avant et après le match, non", async () => {
+  const s = sock("all");
+  const d = new Direct(ctx([s]), {});
+  await d.poll(); // état encore inconnu : lecture fraîche
+  assert.ok(net.urls.every((u) => /\?t=\d+$/.test(u)), net.urls.join(" "));
+  await new Promise((r) => setTimeout(r, 2));
+  await d.poll(); // LIVE
+  const t = net.urls.filter((u) => u.includes("/landing")).map((u) => u.split("?t=")[1]);
+  assert.equal(t.length, 2); assert.notEqual(t[0], t[1]); // jamais deux fois la même adresse
+  for (const state of ["PRE", "FUT", "FINAL", "OFF"]) {
+    d.state = state;
+    assert.equal(d.url("landing"), `https://api-web.nhle.com/v1/gamecenter/${GAME_ID}/landing`, state);
+  }
+  d.state = "CRIT";
+  assert.match(d.url("boxscore", 123), /\/boxscore\?t=123$/);
 });
