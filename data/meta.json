@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-10-28T15:00:30.122Z",
-  "checkedAt": "2026-10-28T15:00:30.122Z",
+  "updatedAt": "2026-10-28T16:00:34.238Z",
+  "checkedAt": "2026-10-28T16:00:34.238Z",
   "sources": {
     "schedule": {
       "ok": true,
@@ -12,7 +12,7 @@
     },
     "standings": {
       "ok": true,
-      "url": "https://api-web.nhle.com/v1/standings/2026-10-27"
+      "url": "https://api-web.nhle.com/v1/standings/2026-10-28"
     },
     "roster": {
       "ok": true,
