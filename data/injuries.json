@@ -1,9 +1,19 @@
 {
  "source": "ESPN",
  "url": "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/injuries",
- "fetchedAt": "2026-10-29T22:45:29.846Z",
- "updatedAt": "2026-10-25T21:15:26.299Z",
+ "fetchedAt": "2026-10-29T23:45:27.557Z",
+ "updatedAt": "2026-10-29T23:45:27.557Z",
  "players": [
+  {
+   "name": "Mike Matheson",
+   "firstName": "Mike",
+   "lastName": "Matheson",
+   "pos": "D",
+   "status": "Out",
+   "type": "Lower Body",
+   "returnDate": "2026-10-31",
+   "updated": "2026-10-29T23:36Z"
+  },
   {
    "name": "Nick Suzuki",
    "firstName": "Nick",
