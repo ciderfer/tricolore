@@ -20,7 +20,7 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 | Fichier | Rôle |
 | --- | --- |
 | `index.html`, `styles.css`, `app.js` | La page d’accueil |
-| `commun.js` | Fonctions communes aux 5 pages (échappement, dates, chargement de `data/` avec `meta.json`, pied de page), chargé avant le script de chaque page |
+| `commun.js` | Fonctions communes aux 6 pages (échappement, dates, chargement de `data/` avec `meta.json`, pied de page), chargé avant le script de chaque page |
 | `scripts/fetch-data.mjs` | Récupère les données (Node 20, sans dépendance) |
 | `scripts/news.mjs` | Sources de nouvelles et filtre « Canadien » |
 | `scripts/fetch-injuries.mjs`, `blesses.js`, `blesses.css` | Blessés du CH (source ESPN non officielle) : récupération par la tâche de données, section de la page Alignement |
@@ -135,7 +135,7 @@ npm test && npm run deploy
 
 ## Worker Cloudflare (pointage en direct)
 
-- Adresse : `https://tricolore.tricolore.workers.dev` (constante `WORKER_DEFAULT` dans `app.js`).
+- Adresse : `https://tricolore.tricolore.workers.dev` (constante `WORKER` dans `commun.js`).
 - Requêtes GET seulement (sauf `POST /push/subscribe` et `POST /push/unsubscribe`, voir Alertes de match), depuis `https://ciderfer.github.io` ou `localhost`. Au plus 300 requêtes par minute par adresse IP (liaison `LIMITE` de `wrangler.toml`), sinon réponse 429. Chemins permis : `scoreboard/MTL/now`, `score/now` (cache 5 s), `gamecenter/<id>/landing|boxscore|right-rail` (matchs du Canadien seulement, vérifié avec `landing` ; cache 5 s en direct, 2 min si final non officiel, 1 h si officiel), `club-schedule-season/MTL/now`, `standings/now` (cache 60 s). Aucun secret.
 - Déploiement manuel, depuis le dossier `worker/` (Node 22+, compte Cloudflare connecté). La version de wrangler est fixée dans `worker/package.json` :
 
