@@ -14,8 +14,9 @@ const UPSTREAM = "https://api-web.nhle.com";
 const MTL = "MTL";
 const LIVE = new Set(["LIVE", "CRIT"]);
 const DONE = new Set(["OFF", "FINAL"]);
-export const MAX_SUBS = 40;        // plan gratuit : 50 sous-requêtes par exécution (envois + 2 lectures LNH)
-export const MAX_PUSH_PER_RUN = 45;
+export const MAX_SUBS = 500;       // une seule lecture list() du KV (1 000 clés au plus)
+// Plan gratuit : 50 sous-requêtes par exécution. Minuterie : 2 lectures LNH, GitHub aux 15 min, l'objet Envoi, plus ce lot.
+export const BATCH = 40;
 const RECENT_MS = 8 * 3600 * 1000; // un match terminé n'est suivi (pour l'alerte « Final ») que 8 h après le début
 const KEEP_GAMES = 4;              // nombre de matchs gardés dans « etat »
 const PREFS = { debut: "d", buts: "b", final: "f" };
@@ -210,41 +211,45 @@ export async function runAlertes(env, nowMs = Date.now()) {
   const { events, rec: next } = detect(game, landing, rec);
   if (!next) return { game: game.id, events: 0, sent: 0 };
 
-  const vapid = { publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY, subject: env.VAPID_SUBJECT };
+  // Un envoi par abonné et par événement, dans l'ordre. Les BATCH premiers partent tout de suite; la suite est
+  // confiée à l'objet « Envoi » (envoi.js), qui l'envoie par lots, une alarme par lot (quelques secondes en tout).
   const subs = events.length ? await listSubs(env) : [];
-  const auths = new Map(); // un jeton VAPID par service de push (même « aud »), calculé une fois
-  for (const s of subs) {
-    const o = new URL(s.endpoint).origin;
-    if (!auths.has(o)) auths.set(o, await vapidAuth(s.endpoint, vapid, Math.floor(nowMs / 1000)));
-  }
-  const dead = new Set();
-  let budget = MAX_PUSH_PER_RUN, sent = 0, failed = 0;
-  const done = [];
-  for (const ev of events) {
-    const targets = subs.filter((s) => s.p.includes(ev.kind) && !dead.has(s.key));
-    if (targets.length > budget) break; // la suite partira à la prochaine minute (pas notée comme envoyée)
-    budget -= targets.length;
-    await Promise.all(targets.map(async (s) => {
-      const origin = new URL(s.endpoint).origin;
-      try {
-        const st = await sendPush(s, ev.payload, vapid, { ttl: ev.ttl, topic: ev.payload.tag, auth: auths.get(origin) });
-        if (st === 404 || st === 410) dead.add(s.key);
-        else if (st >= 200 && st < 300) sent++;
-        else { failed++; console.error(`push ${origin} : HTTP ${st}`); }
-      } catch (e) { failed++; console.error(`push ${origin} : ${e.message}`); }
-    }));
-    done.push(ev);
-  }
-  // Événements pas envoyés faute de budget : on les retire de l'état pour les reprendre plus tard.
-  const skipped = events.slice(done.length);
-  for (const ev of skipped) {
-    if (ev.kind === "b") next.b = next.b.filter((id) => `${game.id}-but-${id}` !== ev.payload.tag);
-    if (ev.kind === "f") delete next.f;
+  const items = events.flatMap((ev) => subs.filter((s) => s.p.includes(ev.kind)).map((s) => ({ s, ev })));
+  const later = items.slice(BATCH);
+  const r = await sendBatch(env, items.slice(0, BATCH), nowMs);
+  if (later.length) {
+    try {
+      const r2 = await env.ENVOI.get(env.ENVOI.idFromName("alertes")).fetch("https://envoi/", { method: "POST", body: JSON.stringify(later) });
+      if (!r2.ok) throw new Error(`HTTP ${r2.status}`);
+    } catch (e) { console.error(`alertes : ${later.length} envois perdus (objet Envoi : ${e.message})`); }
   }
   etat.g = { ...(etat.g || {}), [game.id]: next };
   const ids = Object.keys(etat.g).sort();
   for (const id of ids.slice(0, Math.max(0, ids.length - KEEP_GAMES))) delete etat.g[id];
   await env.ALERTES.put("etat", JSON.stringify(etat)); // seule écriture de la minuterie : quand il y a du nouveau
-  await Promise.all([...dead].map((k) => env.ALERTES.delete(k))); // abonnements expirés (404 ou 410)
-  return { game: game.id, events: done.length, sent, failed, removed: dead.size };
+  return { game: game.id, events: events.length, ...r, queued: later.length };
+}
+
+// Envoie un lot [{ s: abonné, ev: événement }] (au plus BATCH). Retire du KV les abonnements expirés (404 ou 410).
+// Utilisé par la minuterie (premier lot) et par l'objet « Envoi » (la suite).
+export async function sendBatch(env, items, nowMs = Date.now()) {
+  const vapid = { publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY, subject: env.VAPID_SUBJECT };
+  const auths = new Map(); // un jeton VAPID par service de push (même « aud »), calculé une fois
+  for (const { s } of items) {
+    const o = new URL(s.endpoint).origin;
+    if (!auths.has(o)) auths.set(o, await vapidAuth(s.endpoint, vapid, Math.floor(nowMs / 1000)));
+  }
+  const dead = new Set();
+  let sent = 0, failed = 0;
+  await Promise.all(items.map(async ({ s, ev }) => {
+    const origin = new URL(s.endpoint).origin;
+    try {
+      const st = await sendPush(s, ev.payload, vapid, { ttl: ev.ttl, topic: ev.payload.tag, auth: auths.get(origin) });
+      if (st === 404 || st === 410) dead.add(s.key);
+      else if (st >= 200 && st < 300) sent++;
+      else { failed++; console.error(`push ${origin} : HTTP ${st}`); }
+    } catch (e) { failed++; console.error(`push ${origin} : ${e.message}`); }
+  }));
+  await Promise.all([...dead].map((k) => env.ALERTES.delete(k)));
+  return { sent, failed, removed: dead.size };
 }

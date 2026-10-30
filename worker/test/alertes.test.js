@@ -1,6 +1,7 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { runAlertes, detect, pickGame, subscribe } from "../alertes.js";
+import { runAlertes, detect, pickGame, subscribe, BATCH } from "../alertes.js";
+import { Envoi } from "../envoi.js";
 import { memKV, mockNet, stage, makeSubscriber, testVapid, GAME_ID, START } from "./helpers.js";
 
 let net, kv, env, subs;
@@ -131,4 +132,61 @@ test("pickGame et detect : cas limites", () => {
   const g = stage(2).scoreboard.gamesByDate[0].games[0];
   assert.deepEqual(detect(g, null, null), { events: [], rec: null }, "feuille illisible : on attend");
   assert.deepEqual(detect(g, null, { d: 1, b: [277] }), { events: [], rec: null });
+});
+
+// Faux contexte de Durable Object (stockage trié + alarme), pour l'objet Envoi.
+function doCtx() {
+  const m = new Map();
+  let alarm = null;
+  return { m, storage: {
+    get: async (k) => m.get(k), put: async (k, v) => { m.set(k, structuredClone(v)); }, delete: async (k) => m.delete(k),
+    list: async ({ prefix = "", limit = Infinity }) => new Map([...m].filter(([k]) => k.startsWith(prefix)).sort(([a], [b]) => (a < b ? -1 : 1)).slice(0, limit)),
+    getAlarm: async () => alarm, setAlarm: async (t) => { alarm = t; },
+    takeAlarm() { const a = alarm; alarm = null; return a; },
+  } };
+}
+
+test("120 appareils : 40 tout de suite, le reste par l'objet Envoi, un lot par alarme; ≤ 50 sous-requêtes par exécution", async () => {
+  const all = [];
+  for (let i = 0; i < 120; i++) { const s = await makeSubscriber(`s${i}`); all.push(s); await addSub(s); }
+  all[70].status = 410; // expiré : retiré par l'objet Envoi
+  const c = doCtx();
+  const envoi = new Envoi(c, env);
+  env.ENVOI = { idFromName: (n) => n, get: () => ({ fetch: (url, init) => envoi.fetch(new Request(url, init)) }) };
+  const real = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = (...a) => { calls++; return real(...a); };
+
+  net.stage = stage(0, "LIVE");
+  const r = await runAlertes(env, START);
+  assert.equal(r.sent, BATCH); assert.equal(r.queued, 120 - BATCH);
+  assert.ok(calls <= 50, `minuterie : ${calls} requêtes`);
+  assert.equal(net.pushes.length, BATCH);
+
+  let alarms = 0;
+  while (c.storage.takeAlarm() != null) {
+    calls = 0; alarms++;
+    await envoi.alarm();
+    assert.ok(calls <= 50, `alarme : ${calls} requêtes`);
+  }
+  assert.equal(alarms, Math.ceil((120 - BATCH) / BATCH));
+  const got = net.pushes.map((p) => p.to);
+  assert.equal(got.length, 119); assert.equal(new Set(got).size, 119, "un seul envoi par appareil");
+  assert.ok(got.every((n) => n !== "s70"));
+  assert.deepEqual([...c.m.keys()].filter((k) => k.startsWith("q:")), [], "file vide");
+  assert.equal((await kv.list({ prefix: "sub:" })).keys.length, 119);
+
+  // Minute suivante, rien de neuf : aucun envoi, rien en file.
+  await runAlertes(env, START + MIN);
+  assert.equal(net.pushes.length, 119); assert.equal(c.storage.takeAlarm(), null);
+});
+
+test("objet Envoi absent ou en panne : le premier lot part quand même, l'état est noté (pas de doublon)", async () => {
+  for (let i = 0; i < BATCH + 5; i++) { const s = await makeSubscriber(`p${i}`); await addSub(s); }
+  env.ENVOI = { idFromName: (n) => n, get: () => ({ fetch: async () => { throw new Error("panne"); } }) };
+  net.stage = stage(0, "LIVE");
+  const r = await runAlertes(env, START);
+  assert.equal(r.sent, BATCH);
+  await runAlertes(env, START + MIN);
+  assert.equal(net.pushes.length, BATCH);
 });

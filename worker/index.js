@@ -17,6 +17,7 @@
 // au lieu d'une requête aux 15 s. Liaison Durable Object : DIRECT.
 import { runAlertes, subscribe, unsubscribe } from "./alertes.js";
 export { Direct } from "./direct.js";
+export { Envoi } from "./envoi.js";
 
 const UPSTREAM = "https://api-web.nhle.com";
 

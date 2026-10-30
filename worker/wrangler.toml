@@ -36,3 +36,13 @@ class_name = "Direct"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Direct"]
+
+# Envoi (envoi.js) : la suite des alertes au-delà du premier lot de la minuterie, un lot par alarme
+# (chaque alarme a ses propres 50 sous-requêtes). Un seul objet.
+[[durable_objects.bindings]]
+name = "ENVOI"
+class_name = "Envoi"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Envoi"]
