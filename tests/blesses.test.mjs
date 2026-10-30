@@ -59,7 +59,7 @@ test("coupure à 3 jours : ok jusqu'à 72 h, puis message", () => {
   assert.equal(TB.state(null, NOW), "error");
   assert.equal(TB.state({ players: [] }, NOW), "error"); // sans fetchedAt
   const html = TB.section(file([P({ firstName: "Nick", lastName: "Suzuki" })], ago(80)), roster, NOW);
-  assert.match(html, /source ESPN indisponible \(aucune mise à jour depuis plus de 3 jours\)/);
+  assert.match(html, /données indisponibles \(aucune mise à jour depuis plus de 3 jours\)/);
   assert.doesNotMatch(html, /Suzuki/);
   assert.equal(TB.injuredIds(file([P({ firstName: "Nick", lastName: "Suzuki" })], ago(80)), roster, NOW).size, 0);
 });
@@ -69,8 +69,14 @@ test("états vide et erreur", () => {
   assert.match(empty, /Aucun blessé signalé\./);
   assert.match(empty, /Source : ESPN · mis à jour le 23 oct\., 18 h 05\./);
   const err = TB.section(null, roster, NOW, "HTTP 404");
-  assert.match(err, /class="err">Blessés : source ESPN indisponible \(HTTP 404\)\. Aucune donnée affichée/);
-  assert.match(TB.section(undefined, roster, NOW), /\(données absentes\)/);
+  assert.match(err, /class="err">Blessés : données indisponibles \(HTTP 404\)\. Aucune donnée affichée/);
+  assert.match(TB.section(undefined, roster, NOW), /données indisponibles \(fichier absent\)/);
+  // Échec ESPN noté dans le fichier (players null) : jamais « Aucun blessé signalé ».
+  const down = TB.section({ ...file(null), error: "CH absent de la réponse ESPN" }, roster, NOW);
+  assert.match(down, /données indisponibles \(CH absent de la réponse ESPN\)/);
+  assert.doesNotMatch(down, /Aucun blessé/);
+  assert.match(TB.section({ fetchedAt: ago(1), players: "?" }, roster, NOW), /données indisponibles \(fichier illisible\)/);
+  assert.equal(TB.injuredIds(file(null), roster, NOW).size, 0);
 });
 
 test("section : groupes par statut, tri par retour, numéro et lien seulement si jumelé, texte échappé", () => {
@@ -103,12 +109,14 @@ test("extract : champs structurés du CH seulement, jamais de commentaire rédig
   assert.doesNotMatch(JSON.stringify(out), /rédigé|Idem|fantasy/);
 });
 
-test("extract : CH absent d'une réponse valide = aucun blessé; format inattendu = erreur", () => {
-  assert.deepEqual(extract(espn([{ id: "25", injuries: [raw()] }])), []);
+test("extract : CH absent ou format inattendu = erreur (jamais « aucun blessé » par défaut)", () => {
+  assert.throws(() => extract(espn([{ id: "25", injuries: [raw()] }])), /CH absent/);
   assert.throws(() => extract({}), /format inattendu/);
   assert.throws(() => extract(espn([])), /format inattendu/);
   assert.throws(() => extract(espn([{ id: TEAM_ID }])), /format inattendu/);
-  assert.deepEqual(extract(espn([{ id: TEAM_ID, injuries: [raw({ status: "" })] }])), []); // entrée incomplète écartée
+  assert.deepEqual(extract(espn([{ id: TEAM_ID, injuries: [raw(), raw({ status: "" })] }])).length, 1); // entrée incomplète écartée
+  assert.throws(() => extract(espn([{ id: TEAM_ID, injuries: [raw({ status: "" })] }])), /fiches illisibles/);
+  assert.deepEqual(extract(espn([{ id: TEAM_ID, injuries: [] }])), []); // liste vide fournie par ESPN : aucun blessé
   assert.equal(extract(espn([{ id: TEAM_ID, injuries: [raw({ details: { returnDate: "bientôt" } })] }]))[0].returnDate, null);
 });
 
@@ -123,4 +131,9 @@ test("nextFile : réécrit si la liste change ou toutes les 45 min, sinon rien",
   const changed = nextFile(old, [], now);
   assert.equal(changed.updatedAt, now.toISOString());
   assert.equal(nextFile(null, [], now).source, "ESPN");
+  // Échec : players null et la raison; pas réécrit pendant 45 min si c'est la même erreur.
+  const down = nextFile(old, null, now, "HTTP 503");
+  assert.equal(down.players, null); assert.equal(down.error, "HTTP 503");
+  assert.equal(nextFile(down, null, new Date(NOW + 60e3), "HTTP 503"), null);
+  assert.equal(nextFile(down, players, new Date(NOW + 60e3)).error, undefined, "retour à la normale");
 });

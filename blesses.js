@@ -1,6 +1,7 @@
 // Tricolore — section « Blessés » de la page Alignement (lit data/injuries.json, écrit par scripts/fetch-injuries.mjs).
 // Source : API publique non officielle d'ESPN, champs structurés seulement. Les dates de retour sont des estimations.
-// Règle d'or : aucune donnée inventée. Fichier absent, illisible ou de plus de 3 jours : message clair, aucune liste.
+// Règle d'or : aucune donnée inventée. Fichier absent, illisible, en échec (players null, CH absent d'ESPN) ou de plus
+// de 3 jours : « données indisponibles », aucune liste (jamais « Aucun blessé signalé » sans le savoir).
 // Script classique (chargé avant alignement.js) : expose window.TB; sous Node (tests), module.exports.
 (function (root) {
   "use strict";
@@ -58,7 +59,7 @@
   }
 
   const errBox = (detail) =>
-    `<div class="err">Blessés : source ESPN indisponible${detail ? ` (${esc(detail)})` : ""}. Aucune donnée affichée plutôt qu’une donnée inexacte.</div>`;
+    `<div class="err">Blessés : données indisponibles${detail ? ` (${esc(detail)})` : ""}. Aucune donnée affichée plutôt qu’une donnée inexacte.</div>`;
 
   function row(p, roster) {
     const m = match(roster, p);
@@ -74,7 +75,7 @@
   function section(inj, roster, now, errDetail) {
     const h = `<h2 class="h cond">Blessés</h2>`;
     const st = state(inj, now);
-    if (st !== "ok") return `<section class="blk white inj-blk">${h}${errBox(st === "stale" ? "aucune mise à jour depuis plus de 3 jours" : errDetail || "données absentes")}</section>`;
+    if (st !== "ok") return `<section class="blk white inj-blk">${h}${errBox(st === "stale" ? "aucune mise à jour depuis plus de 3 jours" : errDetail || inj?.error || (inj ? "fichier illisible" : "fichier absent"))}</section>`;
     const when = stamp(inj.fetchedAt);
     if (!inj.players.length)
       return `<section class="blk white inj-blk">${h}<p class="inj-none">Aucun blessé signalé.</p><p class="asof inj-src">Source : ESPN · mis à jour le ${esc(when)}.</p></section>`;
