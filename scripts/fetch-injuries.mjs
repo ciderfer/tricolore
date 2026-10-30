@@ -5,8 +5,9 @@
 //   fetchedAt = dernière lecture réussie d'ESPN; updatedAt = dernier changement de la liste.
 // - Champs structurés seulement (nom, position, statut, type de blessure, date de retour estimée,
 //   date de la fiche ESPN). Jamais les commentaires rédigés (longComment, shortComment).
-// - En cas d'échec (réseau, HTTP, format inattendu), le fichier existant est gardé tel quel
-//   et le script se termine sans erreur : la page affiche un message si fetchedAt a plus de 3 jours.
+// - En cas d'échec (réseau, HTTP, format inattendu, CH absent de la réponse), le fichier devient
+//   { players: null, error } et le script se termine sans erreur : la page affiche « données indisponibles »,
+//   jamais « Aucun blessé signalé » sans le savoir.
 // - Si la liste n'a pas changé et que fetchedAt a moins de 45 min, rien n'est réécrit (pas de commit).
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -19,13 +20,13 @@ const str = (v) => (typeof v === "string" && v.trim() ? v.trim() : null);
 const day = (v) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 
 // Réponse brute d'ESPN → liste des blessés du CH (champs structurés). Lance une erreur si le format est inattendu.
-// ESPN omet les équipes sans blessé : équipe absente d'une réponse valide = aucun blessé.
+// ESPN omet les équipes sans blessé, mais aussi parfois des équipes par erreur : CH absent = on ne sait pas (erreur).
 export function extract(raw) {
   if (!raw || !Array.isArray(raw.injuries) || !raw.injuries.length) throw new Error("format inattendu (injuries absent)");
   const team = raw.injuries.find((t) => String(t?.id) === TEAM_ID);
-  if (!team) return [];
+  if (!team) throw new Error("CH absent de la réponse ESPN");
   if (!Array.isArray(team.injuries)) throw new Error("format inattendu (équipe sans liste)");
-  return team.injuries
+  const out = team.injuries
     .map((i) => ({
       name: str(i?.athlete?.displayName),
       firstName: str(i?.athlete?.firstName),
@@ -37,11 +38,13 @@ export function extract(raw) {
       updated: str(i?.date),
     }))
     .filter((p) => p.name && p.lastName && p.status);
+  if (team.injuries.length && !out.length) throw new Error("format inattendu (fiches illisibles)");
+  return out;
 }
 
-// Nouveau contenu du fichier, ou null s'il n'y a rien à réécrire.
-export function nextFile(old, players, now) {
-  const same = JSON.stringify(old?.players) === JSON.stringify(players);
+// Nouveau contenu du fichier, ou null s'il n'y a rien à réécrire. Échec : players null et error (la raison).
+export function nextFile(old, players, now, error = null) {
+  const same = JSON.stringify(old?.players) === JSON.stringify(players) && (old?.error ?? null) === error;
   const last = Date.parse(old?.fetchedAt || 0) || 0;
   if (same && now - last <= HEARTBEAT_MS) return null;
   return {
@@ -50,6 +53,7 @@ export function nextFile(old, players, now) {
     fetchedAt: now.toISOString(),
     updatedAt: same && old?.updatedAt ? old.updatedAt : now.toISOString(),
     players,
+    ...(error ? { error } : {}),
   };
 }
 
@@ -67,7 +71,10 @@ async function main() {
     if (next) await writeFile(FILE, JSON.stringify(next, null, 1) + "\n");
     console.log(`Blessés (ESPN) : ${players.length}${next ? "" : " (aucun changement)"}.`);
   } catch (err) {
-    console.log(`ÉCHEC blessés ESPN (${err?.message || err}) : ancien fichier conservé.`);
+    const error = String(err?.message || err);
+    const next = nextFile(old, null, new Date(), error);
+    if (next) await writeFile(FILE, JSON.stringify(next, null, 1) + "\n");
+    console.log(`ÉCHEC blessés ESPN (${error}) : données indisponibles.`);
   }
 }
 

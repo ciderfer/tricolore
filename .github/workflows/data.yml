@@ -33,7 +33,7 @@ jobs:
         run: node scripts/fetch-data.mjs
 
       # Blessés (API non officielle d'ESPN) : un échec ne doit jamais bloquer les données LNH.
-      # Le script garde l'ancien data/injuries.json s'il échoue; le commit ci-dessous (git add data) l'inclut.
+      # En cas d'échec, le script écrit « données indisponibles » (players null); le commit ci-dessous (git add data) l'inclut.
       - name: Récupérer les blessés (ESPN)
         continue-on-error: true
         timeout-minutes: 1
