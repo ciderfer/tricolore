@@ -320,7 +320,7 @@ table.wc tr.mtl td:first-child,table.wc tr.mtl td.pts{color:var(--white)}
 .hero-err{margin:30px 18px 0}
 footer{background:var(--blue);color:#aeb3e0;font-size:13.5px;font-weight:500;padding:4px 18px calc(30px + env(safe-area-inset-bottom))}
 footer p{margin:4px 0}
-.loading{padding:120px 18px;font-stretch:62%;font-weight:900;font-size:40px;text-transform:uppercase}
+.loading{margin:0;padding:120px 18px;font-stretch:62%;font-weight:900;font-size:40px;text-transform:uppercase}
 sup{font-size:.62em;line-height:0;vertical-align:.5em}
 .time small{letter-spacing:.06em;font-size:14px;line-height:1.15;text-transform:none;font-weight:700}
 .rec .rank{font-size:17px}
