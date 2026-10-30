@@ -118,7 +118,7 @@ Page `alertes.html` (lien « Alertes de match » au bas des pages). Notification
 
 - iPhone : iOS 16.4 ou plus récent, et **seulement depuis l’icône de l’écran d’accueil**. Dans Safari, la page affiche les étapes (Share › Add to Home Screen) au lieu du bouton.
 - Le Worker (minuterie chaque minute) lit `scoreboard/MTL/now`, plus `gamecenter/<id>/landing` seulement pendant un match ou juste après. Les messages ne reprennent que ce que l’API LNH rend.
-- Abonnements dans le KV `ALERTES` (une clé par appareil, tout dans les métadonnées); état des envois dans la clé `etat`. La minuterie n’écrit que lorsqu’une alerte part (environ 10 écritures par match, limite gratuite : 1 000 par jour). Abonnement expiré (404 ou 410) : retiré au premier envoi. Au plus 40 appareils (limite gratuite de 50 sous-requêtes par exécution).
+- Abonnements dans le KV `ALERTES` (une clé par appareil, tout dans les métadonnées); état des envois dans la clé `etat`. La minuterie n’écrit que lorsqu’une alerte part (environ 10 écritures par match, limite gratuite : 1 000 par jour). Abonnement expiré (404 ou 410) : retiré au premier envoi. Au plus 500 appareils : la minuterie envoie les 40 premières alertes, l’objet `Envoi` (`envoi.js`) envoie la suite par lots de 40, une alarme par lot (limite gratuite de 50 sous-requêtes par exécution).
 - Chiffrement (RFC 8291, `aes128gcm`) et jeton VAPID (RFC 8292, ES256) faits avec WebCrypto, sans dépendance (`worker/push.js`).
 - Mise en place (faite le 20 octobre 2026; à refaire seulement pour changer les clés VAPID, ce qui oblige chaque appareil à se réabonner), dans `worker/` :
 
