@@ -19,7 +19,7 @@ const SHELL = [
   "commun.js", "navigation.js", "horsligne.js", "app.js", "calendrier.js", "alignement.js", "blesses.js", "match.js", "joueur.js", "alertes.js",
   "styles.css", "blesses.css", "alertes.css",
   "fonts/archivo-latin.woff2", "fonts/graduate-latin.woff2",
-  "manifest.webmanifest", "icons/favicon.svg", "icons/favicon-32.png", "icons/favicon.ico", "icons/apple-touch-icon.png", "icons/icon-192.png",
+  "manifest.webmanifest", "icons/favicon.svg", "icons/favicon-32.png", "icons/favicon.ico", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/partage.png",
 ];
 const DATA = ["meta", "schedule", "scoreboard", "standings", "roster", "stats", "news", "injuries"].map((n) => `data/${n}.json`);
 
