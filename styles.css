@@ -41,6 +41,7 @@ body{margin:0;background:var(--red);color:var(--white);font:500 18px/1.35 Archiv
 .meta{margin:16px 18px 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-weight:700}
 .chip{background:var(--blue);color:var(--white);font-stretch:100%;font-weight:800;font-size:15px;padding:5px 9px;letter-spacing:.06em}
 .chip.w{background:var(--white);color:var(--red)}
+a.chip{text-decoration:none;display:inline-block;padding:9px 12px} /* bouton de 404.html */
 /* Fiche dans la bande */
 .rec{padding:18px 18px 16px;display:grid;grid-template-columns:auto 1fr;gap:4px 16px;align-items:center}
 .rec .big{font-size:76px;line-height:.9;grid-row:span 2}
