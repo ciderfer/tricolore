@@ -15,7 +15,7 @@
 const CACHE = "tricolore-v1";
 const TIMEOUT_MS = 4_000;
 const SHELL = [
-  "./", "calendrier.html", "alignement.html", "match.html", "joueur.html", "alertes.html",
+  "./", "calendrier.html", "alignement.html", "match.html", "joueur.html", "alertes.html", "404.html",
   "commun.js", "navigation.js", "horsligne.js", "app.js", "calendrier.js", "alignement.js", "blesses.js", "match.js", "joueur.js", "alertes.js",
   "styles.css", "blesses.css", "alertes.css",
   "fonts/archivo-latin.woff2", "fonts/graduate-latin.woff2",
