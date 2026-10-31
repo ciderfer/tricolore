@@ -1,7 +1,7 @@
 {
  "source": "ESPN",
  "url": "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/injuries",
- "fetchedAt": "2026-10-31T18:30:28.746Z",
+ "fetchedAt": "2026-10-31T19:29:45.805Z",
  "updatedAt": "2026-10-31T15:45:28.436Z",
  "players": [
   {
