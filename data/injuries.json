@@ -1,8 +1,8 @@
 {
  "source": "ESPN",
  "url": "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/injuries",
- "fetchedAt": "2026-10-31T14:15:28.734Z",
- "updatedAt": "2026-10-31T14:15:28.734Z",
+ "fetchedAt": "2026-10-31T14:30:27.904Z",
+ "updatedAt": "2026-10-31T14:30:27.904Z",
  "players": [
   {
    "name": "Mike Matheson",
@@ -31,7 +31,7 @@
    "pos": "G",
    "status": "Injured Reserve",
    "type": "Lower Body",
-   "returnDate": "2026-10-31",
+   "returnDate": "2026-11-05",
    "updated": "2026-10-10T21:20Z"
   },
   {
