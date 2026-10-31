@@ -1,18 +1,28 @@
 {
  "source": "ESPN",
  "url": "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/injuries",
- "fetchedAt": "2026-10-31T15:15:59.238Z",
- "updatedAt": "2026-10-31T14:30:27.904Z",
+ "fetchedAt": "2026-10-31T15:45:28.436Z",
+ "updatedAt": "2026-10-31T15:45:28.436Z",
  "players": [
   {
    "name": "Mike Matheson",
    "firstName": "Mike",
    "lastName": "Matheson",
    "pos": "D",
-   "status": "Day-To-Day",
+   "status": "Out",
    "type": "Lower Body",
-   "returnDate": "2026-10-31",
-   "updated": "2026-10-30T13:17Z"
+   "returnDate": "2026-11-14",
+   "updated": "2026-10-31T15:31Z"
+  },
+  {
+   "name": "Sam Montembeault",
+   "firstName": "Sam",
+   "lastName": "Montembeault",
+   "pos": "G",
+   "status": "Injured Reserve",
+   "type": "Lower Body",
+   "returnDate": "2026-11-05",
+   "updated": "2026-10-31T15:25Z"
   },
   {
    "name": "Nick Suzuki",
@@ -23,16 +33,6 @@
    "type": "Upper Body",
    "returnDate": "2026-11-18",
    "updated": "2026-10-22T15:30Z"
-  },
-  {
-   "name": "Sam Montembeault",
-   "firstName": "Sam",
-   "lastName": "Montembeault",
-   "pos": "G",
-   "status": "Injured Reserve",
-   "type": "Lower Body",
-   "returnDate": "2026-11-05",
-   "updated": "2026-10-10T21:20Z"
   },
   {
    "name": "Ivan Demidov",
