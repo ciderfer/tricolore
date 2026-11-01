@@ -3,7 +3,7 @@
 // Règle d'or : aucune donnée inventée. Si une source manque, on affiche un message clair.
 (function () {
   "use strict";
-  const { MTL, LIVE, DONE, esc, loc, cap, num, F, fStamp, pct, tvOf, WORKER, POLL_MS, WORDMARK, errBox } = T;
+  const { MTL, LIVE, DONE, esc, loc, cap, num, F, fStamp, pct, tvOf, outcome, WORKER, POLL_MS, WORDMARK, errBox } = T;
   const fWeekday = F({ weekday: "long" }), fDay = F({ day: "numeric" }), fMonth = F({ month: "long" });
   const fShort = F({ day: "numeric", month: "short" }), fShortWd = F({ weekday: "short" });
   const fH = F({ hour: "numeric", hourCycle: "h23" }), fM = F({ minute: "2-digit" });
@@ -149,11 +149,8 @@
     if (!games.length) return `<section class="blk">${h}<p class="legend">Aucun match joué cette saison.</p></section>`;
     return `<section class="blk">${h}${games.map((g) => {
       const home = g.homeTeam.abbrev === MTL, us = home ? g.homeTeam : g.awayTeam, them = home ? g.awayTeam : g.homeTeam;
-      const x = g.gameOutcome?.lastPeriodType;
-      const code = us.score > them.score ? "V" : x === "OT" || x === "SO" ? "DP" : "D";
-      const extra = x === "OT" ? "Prol." : x === "SO" ? "TB" : "";
+      const { code, extra, label } = outcome(g);
       const dt = new Date(g.startTimeUTC);
-      const label = code === "V" ? "Victoire" : code === "DP" ? "Défaite en prolongation ou tirs de barrage" : "Défaite";
       return `<a class="res res-a" href="match.html?id=${encodeURIComponent(g.id)}" aria-label="${label} ${us.score} à ${them.score} : feuille de match"><div class="code ${code}" title="${label}">${code}</div>
         <div class="o cond">${esc(loc(them.commonName))}<small>${esc(fShortWd.format(dt))} ${esc(fShort.format(dt))} · ${home ? "Domicile" : "Étranger"}</small></div>
         <div class="s num">${us.score}-${them.score}${extra ? `<small>${extra}</small>` : ""}</div></a>`;

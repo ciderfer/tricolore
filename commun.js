@@ -35,6 +35,15 @@ window.T = (() => {
   const tvOf = (g) => [...new Set((g.tvBroadcasts || []).filter((b) => b.countryCode === "CA").map((b) => b.network))]
     .sort((a, b) => (/RDS|TVA/.test(b) ? 1 : 0) - (/RDS|TVA/.test(a) ? 1 : 0));
 
+  // Résultat d'un match fini, pour le CH : V, D ou DP (défaite en prolongation ou en tirs de barrage).
+  function outcome(g) {
+    const home = g.homeTeam.abbrev === MTL, us = home ? g.homeTeam : g.awayTeam, them = home ? g.awayTeam : g.homeTeam;
+    const x = g.gameOutcome?.lastPeriodType, win = us.score > them.score;
+    const extra = x === "OT" ? "Prol." : x === "SO" ? "TB" : "";
+    const label = `${win ? "Victoire" : "Défaite"}${x === "OT" ? " en prolongation" : x === "SO" ? " en tirs de barrage" : ""}`;
+    return { code: win ? "V" : extra ? "DP" : "D", extra, label };
+  }
+
   // Proxy Cloudflare (worker/) pour les données en direct. En local, ?worker=http://localhost:8787 permet de tester.
   const WORKER = (() => {
     const q = new URLSearchParams(location.search).get("worker");
@@ -161,6 +170,6 @@ window.T = (() => {
     try { return fn(); } catch (e) { console.error(e); return `<div class="blk">${box("Section", "erreur d’affichage")}</div>`; }
   }).join("");
 
-  return { TZ, MTL, LIVE, DONE, esc, loc, fin, cap, num, F, fStamp, pct, gaa, signed, season, age, tvOf,
+  return { TZ, MTL, LIVE, DONE, esc, loc, fin, cap, num, F, fStamp, pct, gaa, signed, season, age, tvOf, outcome,
     WORKER, POLL_MS, liveSocket, WORDMARK, UNOFFICIAL, ALERTES, errBox, getJson, load, footer, sections, lastGoal };
 })();
