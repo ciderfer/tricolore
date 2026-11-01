@@ -3,7 +3,8 @@
 // Stockage (KV, liaison ALERTES) :
 //   « sub:<empreinte> » : un abonné par clé, tout dans les métadonnées { e: endpoint, k: p256dh, a: auth, p: "dbf" }.
 //       Une seule opération list() rend donc tous les abonnés, sans lecture par abonné.
-//   « etat » : ce qui a déjà été envoyé, par match : { g: { <id>: { d: 1 (début), b: [eventId des buts], f: 1 (final) } } }.
+//   « etat » : ce qui a déjà été envoyé, par match : { g: { <id>: { d: 1 (début), b: [eventId des buts], f: 1 (final),
+//       m: [buts disparus une fois de la feuille], e: { <eventId>: équipe du but } } } }.
 // Budget KV (gratuit : 1 000 écritures, 1 000 list et 100 000 lectures par jour) : la minuterie ne lit « etat » que
 // pendant un match (ou peu après), et n'écrit que quand un événement est détecté (au plus ~10 écritures par match).
 // Jamais d'écriture à chaque minute.
@@ -143,6 +144,15 @@ function startPayload(game) {
   return { title: "Le match commence", body, tag: `${game.id}-debut`, game: game.id };
 }
 
+// But déjà annoncé puis retiré de la feuille (reprise vidéo, contestation) : « But refusé ».
+function refusePayload(game, eventId, abbrev) {
+  const t = !abbrev ? null : game.awayTeam.abbrev === abbrev ? game.awayTeam : game.homeTeam;
+  const title = t ? `But refusé : ${team(t)}` : "But refusé";
+  const a = game.awayTeam.score, h = game.homeTeam.score;
+  const body = typeof a === "number" && typeof h === "number" ? `Le but est annulé. Le score est maintenant ${scoreLine(game, a, h)}` : "Le but est annulé.";
+  return { title, body, tag: `${game.id}-refuse-${eventId}`, game: game.id };
+}
+
 function finalPayload(game) {
   const a = game.awayTeam.score, h = game.homeTeam.score;
   if (typeof a !== "number" || typeof h !== "number") return null; // pas de pointage : pas d'alerte
@@ -177,14 +187,31 @@ export function detect(game, landing, rec) {
       if (next.b.includes(g.eventId)) continue;
       events.push({ kind: "b", ttl: 600, payload: goalPayload(game, g) });
       next.b.push(g.eventId);
+      if (g.teamAbbrev?.default) next.e = { ...(next.e || {}), [g.eventId]: g.teamAbbrev.default };
     }
+    // Anti-pépin : un but annoncé qui manque à la feuille n'est déclaré refusé qu'à la 2e lecture de suite
+    // (ou tout de suite sur la feuille finale, qu'on ne relira plus), et seulement si le pointage du tableau
+    // concorde avec la feuille (hors tirs de barrage). Une seule alerte : le but sort de « b ».
+    const seen = new Set(goals.map((g) => g.eventId));
+    const a = game.awayTeam?.score, h = game.homeTeam?.score;
+    const agree = game.periodDescriptor?.periodType === "SO" || a + h === goals.length;
+    const gone = agree ? next.b.filter((id) => !seen.has(id)) : [];
+    const m = [];
+    for (const id of gone) {
+      if (!done && !(rec.m || []).includes(id)) { m.push(id); continue; }
+      events.push({ kind: "b", ttl: 600, payload: refusePayload(game, id, next.e?.[id]) });
+      next.b = next.b.filter((x) => x !== id);
+      if (next.e) { next.e = { ...next.e }; delete next.e[id]; }
+    }
+    if (m.length) next.m = m; else delete next.m;
   }
   if (done) {
     const p = finalPayload(game);
     if (p) events.push({ kind: "f", ttl: 6 * 3600, payload: p });
     next.f = 1;
   }
-  return { events, rec: events.length || next.f !== rec.f ? next : null };
+  const changed = events.length || next.f !== rec.f || JSON.stringify(next.m || []) !== JSON.stringify(rec.m || []);
+  return { events, rec: changed ? next : null };
 }
 
 // ---------- Minuterie ----------

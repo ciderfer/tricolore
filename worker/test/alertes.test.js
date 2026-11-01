@@ -190,3 +190,59 @@ test("objet Envoi absent ou en panne : le premier lot part quand même, l'état 
   await runAlertes(env, START + MIN);
   assert.equal(net.pushes.length, BATCH);
 });
+
+// « But refusé » : le 31 octobre (2026020223), le but 222 a disparu de la feuille après une reprise.
+// Ici : le 3e but (Slafkovský) est annoncé, puis retiré de la feuille et du pointage.
+function refuse(st) {
+  st.landing.summary.scoring.forEach((p) => { p.goals = p.goals.filter((g) => g.eventId !== st.gone); });
+  return st;
+}
+function sansTroisieme() {
+  const st = stage(3); const g3 = st.landing.summary.scoring.flatMap((p) => p.goals)[2];
+  st.gone = g3.eventId; refuse(st);
+  const game = st.scoreboard.gamesByDate[0].games[0];
+  if (game.awayTeam.abbrev === g3.teamAbbrev.default) game.awayTeam.score--; else game.homeTeam.score--;
+  return st;
+}
+const refus = () => net.pushes.filter((p) => p.payload.title.startsWith("But refusé"));
+
+test("but refusé : une seule correction, à la 2e lecture de suite, puis le but sort de la liste", async () => {
+  await addSub(subs.a);
+  let t = START + MIN;
+  const run = async (st) => { net.stage = st; await runAlertes(env, t); t += MIN; };
+  await run(stage(0, "LIVE")); await run(stage(3));
+  const gone = sansTroisieme().gone;
+  await run(sansTroisieme());
+  assert.equal(refus().length, 0, "1re lecture sans le but : on attend");
+  await run(sansTroisieme());
+  assert.deepEqual(refus().map((p) => p.payload), [{ title: "But refusé : CH", body: "Le but est annulé. Le score est maintenant CH 1, Sharks 1", tag: `${GAME_ID}-refuse-${gone}`, game: GAME_ID }]);
+  const w = kv.writes;
+  for (let i = 0; i < 3; i++) await run(sansTroisieme());
+  assert.equal(refus().length, 1, "pas de doublon"); assert.equal(kv.writes, w, "aucune écriture de plus");
+  assert.ok(!JSON.parse(kv.m.get("etat").value).g[GAME_ID].b.includes(gone));
+});
+
+test("but refusé : rien si le but est toujours là, ni pour une disparition d'une seule lecture", async () => {
+  await addSub(subs.a);
+  let t = START + MIN;
+  const run = async (st) => { net.stage = st; await runAlertes(env, t); t += MIN; };
+  await run(stage(0, "LIVE")); await run(stage(3)); await run(stage(3));
+  assert.equal(refus().length, 0);
+  await run(sansTroisieme()); await run(stage(3)); await run(sansTroisieme()); await run(stage(3));
+  assert.equal(refus().length, 0, "pépin d'une lecture : pas de correction");
+  // Feuille vide mais pointage du tableau inchangé : pépin, pas de correction.
+  const vide = stage(3); vide.landing.summary.scoring.forEach((p) => { p.goals = []; });
+  await run(vide); await run(vide);
+  assert.equal(refus().length, 0, "feuille vide incohérente avec le pointage");
+  assert.equal(net.pushes.filter((p) => p.payload.title.startsWith("But")).length, 3, "aucun but réannoncé");
+});
+
+test("but refusé : sur la feuille finale, correction tout de suite (une seule) avec le final", () => {
+  const avant = stage(3).landing.summary.scoring.flatMap((p) => p.goals).map((x) => x.eventId);
+  const st = sansTroisieme(); const gm = st.scoreboard.gamesByDate[0].games[0];
+  gm.gameState = "FINAL";
+  const r = detect(gm, st.landing, { d: 1, b: avant }); // ancien « etat » sans équipe : titre sans équipe
+  assert.deepEqual(r.events.map((e) => e.payload.title), ["But refusé", "Final"]);
+  assert.equal(r.events[0].payload.body, "Le but est annulé. Le score est maintenant CH 1, Sharks 1");
+  assert.ok(!r.rec.b.includes(st.gone)); assert.equal(r.rec.f, 1);
+});
