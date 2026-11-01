@@ -3,7 +3,7 @@
 // Règle d'or : aucune donnée inventée. Si la source manque, on affiche un message clair.
 (function () {
   "use strict";
-  const { MTL, LIVE, DONE, esc, loc, cap, F, tvOf, WORDMARK, errBox } = T;
+  const { MTL, LIVE, DONE, esc, loc, cap, F, tvOf, outcome, WORDMARK, errBox } = T;
   const fMonthKey = F({ year: "numeric", month: "2-digit" }), fMonthName = F({ month: "long", year: "numeric" });
   const fDay = F({ day: "numeric" }), fWd = F({ weekday: "short" });
   const fH = F({ hour: "numeric", hourCycle: "h23" }), fM = F({ minute: "2-digit" });
@@ -25,12 +25,9 @@
     const special = g.gameScheduleState && g.gameScheduleState !== "OK" ? STATE_TXT[g.gameScheduleState] || g.gameScheduleState : "";
     if (DONE.has(g.gameState)) {
       if (Number.isFinite(us.score) && Number.isFinite(them.score)) {
-        const x = g.gameOutcome?.lastPeriodType;
-        const win = us.score > them.score;
-        const code = win ? "V" : "D";
-        const extra = x === "OT" ? "Prol." : x === "SO" ? "TB" : "";
-        label = `${win ? "Victoire" : "Défaite"} ${us.score} à ${them.score}${extra ? (x === "OT" ? " en prolongation" : " en tirs de barrage") : ""}`;
-        right = `<div class="cg-res" aria-label="${esc(label)}"><span class="cg-code ${code}${extra && !win ? " DP" : ""}">${code}</span><span class="num cg-score">${us.score}-${them.score}</span>${extra ? `<span class="cg-x">${extra}</span>` : ""}</div>`;
+        const { code, extra, label: res } = outcome(g);
+        label = `${res} ${us.score} à ${them.score}`;
+        right = `<div class="cg-res" aria-label="${esc(label)}"><span class="cg-code ${code}">${code}</span><span class="num cg-score">${us.score}-${them.score}</span>${extra ? `<span class="cg-x">${extra}</span>` : ""}</div>`;
         extraCls = " done";
       } else right = `<div class="cg-res"><span class="cg-na">Résultat non disponible</span></div>`;
     } else if (LIVE.has(g.gameState)) {
@@ -62,7 +59,7 @@
       ${icsBlock()}
       ${[...months.values()].map((list) => `<section class="blk cal-month"><h2 class="h cond">${esc(cap(fMonthName.format(new Date(list[0].startTimeUTC))))}</h2>
         <ul class="cal">${list.map((g) => row(g, g === next)).join("")}</ul></section>`).join("")}
-      <section class="blk cal-legend"><p class="legend">V victoire · D défaite · Prol. en prolongation · TB en tirs de barrage. Pointage du CH en premier. Heures de l’Est. Saison régulière et séries comptées dans « joués » et « à venir » (matchs préparatoires exclus).</p></section>`;
+      <section class="blk cal-legend"><p class="legend">V victoire · D défaite · DP défaite en prolongation ou tirs de barrage · Prol. en prolongation · TB en tirs de barrage. Pointage du CH en premier. Heures de l’Est. Saison régulière et séries comptées dans « joués » et « à venir » (matchs préparatoires exclus).</p></section>`;
   }
   // Abonnement au calendrier : webcal:// pour que l'iPhone s'abonne (mises à jour automatiques),
   // plus un lien de téléchargement du fichier .ics (écrit par la tâche planifiée, data/canadiens.ics).
