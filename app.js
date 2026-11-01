@@ -150,8 +150,7 @@
     return `<section class="blk">${h}${games.map((g) => {
       const home = g.homeTeam.abbrev === MTL, us = home ? g.homeTeam : g.awayTeam, them = home ? g.awayTeam : g.homeTeam;
       const x = g.gameOutcome?.lastPeriodType;
-      const code = us.score > them.score ? "V" : x === "OT" || x === "SO" ? "DP" : "D";
-      const extra = x === "OT" ? "Prol." : x === "SO" ? "TB" : "";
+      const { code, extra } = T.outcome(us, them, x);
       const dt = new Date(g.startTimeUTC);
       const label = code === "V" ? "Victoire" : code === "DP" ? "Défaite en prolongation ou tirs de barrage" : "Défaite";
       return `<a class="res res-a" href="match.html?id=${encodeURIComponent(g.id)}" aria-label="${label} ${us.score} à ${them.score} : feuille de match"><div class="code ${code}" title="${label}">${code}</div>

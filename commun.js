@@ -156,11 +156,17 @@ window.T = (() => {
     return { key: `${g.eventId ?? goals.length}|${a}-${h}`, text: parts.join(", ") };
   }
 
+  // Résultat d'un match terminé, du point de vue du CH : V, D ou DP (défaite en prolongation ou tirs de barrage).
+  function outcome(us, them, x) {
+    const code = us.score > them.score ? "V" : x === "OT" || x === "SO" ? "DP" : "D";
+    return { code, extra: x === "OT" ? "Prol." : x === "SO" ? "TB" : "" };
+  }
+
   // Assemble les sections d'une page : une section qui plante affiche une erreur, les autres s'affichent quand même.
   const sections = (parts, box = errBox) => parts.map((fn) => {
     try { return fn(); } catch (e) { console.error(e); return `<div class="blk">${box("Section", "erreur d’affichage")}</div>`; }
   }).join("");
 
   return { TZ, MTL, LIVE, DONE, esc, loc, fin, cap, num, F, fStamp, pct, gaa, signed, season, age, tvOf,
-    WORKER, POLL_MS, liveSocket, WORDMARK, UNOFFICIAL, ALERTES, errBox, getJson, load, footer, sections, lastGoal };
+    WORKER, POLL_MS, liveSocket, WORDMARK, UNOFFICIAL, ALERTES, errBox, getJson, load, footer, sections, lastGoal, outcome };
 })();
