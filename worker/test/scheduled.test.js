@@ -1,7 +1,7 @@
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import worker from "../index.js";
-import { memKV, mockNet, stage, START } from "./helpers.js";
+import { memKV, mockNet, stage, withEnvoi, START } from "./helpers.js";
 
 let net;
 beforeEach(() => { net = mockNet(); net.stage = stage(0, "PRE"); });
@@ -41,10 +41,11 @@ test("une erreur des alertes n'empêche pas le lancement de data.yml (et vice ve
   assert.equal(net.github.length, 1);
 });
 
-test("minuterie chaque minute pendant un match : une seule lecture KV par minute, aucune écriture sans événement", async () => {
+test("minuterie chaque minute pendant un match : état dans l'objet Envoi, aucune écriture sans événement", async () => {
   const kv = memKV();
   const env = { ALERTES: kv, VAPID_PUBLIC_KEY: "x", VAPID_PRIVATE_KEY: "x", VAPID_SUBJECT: "mailto:a@b.c" };
+  const { ctx } = withEnvoi(env);
   net.stage = stage(4); // en direct; première vue : ligne de base (1 écriture)
   for (let i = 0; i < 10; i++) await worker.scheduled({ scheduledTime: START + (61 + i) * 60_000 }, env);
-  assert.equal(kv.writes, 1); assert.equal(kv.reads, 10); assert.equal(kv.lists, 0);
+  assert.equal(ctx.writes, 1); assert.equal(kv.writes, 0); assert.equal(kv.reads, 1, "KV lu une fois (reprise), puis plus"); assert.equal(kv.lists, 0);
 });
