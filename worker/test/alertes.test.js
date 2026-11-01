@@ -53,9 +53,13 @@ test("un match complet : avant-match, début, buts, final, sans doublon; écritu
   assert.equal(net.pushes.length, 2); assert.equal(obj.ctx.writes, w0 + 2);
 
   // Deux buts entre deux minutes (Suzuki, Slafkovský) : deux alertes, une seule écriture.
+  // Envoyées en parallèle : l'ordre d'arrivée n'est pas garanti.
   await run(stage(3));
   assert.deepEqual(net.pushes.slice(2).map((p) => p.payload.title), ["But du CH !", "But du CH !"]);
-  assert.equal(net.pushes[3].payload.body, "J. Slafkovský (2) · CH 2, Sharks 1 · 2e période, 01:49");
+  assert.deepEqual(net.pushes.slice(2).map((p) => p.payload.body).sort(), [
+    "J. Slafkovský (2) · CH 2, Sharks 1 · 2e période, 01:49",
+    "N. Suzuki (5) · CH 1, Sharks 1 · 1re période, 16:38",
+  ]);
   assert.equal(obj.ctx.writes, w0 + 3);
 
   // Fin du match en prolongation, avec les buts restants vus en même temps.
