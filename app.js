@@ -199,6 +199,46 @@
   }
   const sleeve = `<div class="sleeve" aria-hidden="true"></div>`;
 
+  // ---- Carte « Alertes de match », sous le prochain match ----
+  // L'état est lu avant le premier affichage (pas de carte qui apparaît ou disparaît après coup).
+  // Abonnement : le même que la page Alertes (T.pushSubscribe), avec les choix enregistrés sur cet appareil.
+  const al = { state: "", msg: "", busy: false, reg: null, key: null };
+  async function alertSetup() {
+    try {
+      const dev = T.pushDevice();
+      const reg = dev.push ? await navigator.serviceWorker.getRegistration() : null; // getRegistration : jamais d'attente sans fin
+      al.state = T.alertCard(dev, !!(await reg?.pushManager.getSubscription()));
+    } catch (e) { console.warn("Alertes de match :", e.message); }
+    if (al.state !== "activer") return;
+    // Prêts avant le toucher : Safari exige que subscribe() parte dans le geste, sans attente réseau avant.
+    navigator.serviceWorker.ready.then((r) => { al.reg = r; });
+    T.pushKey().then((k) => { al.key = k; }, (e) => console.warn("Alertes de match :", e.message));
+  }
+  const alertBody = () => al.state === "installer"
+    ? `<p class="al-intro">Ajoute Tricolore à ton écran d’accueil pour recevoir les alertes de buts.</p>
+      <ol class="al-steps"><li>Touche <b>Share</b> en bas de Safari</li><li>Choisis <b>Add to Home Screen</b></li><li>Ouvre Tricolore depuis l’icône</li></ol>`
+    : al.state === "activer"
+    ? `<p class="al-intro">Buts, début et fin de match, direct sur ton téléphone.</p><button type="button" class="ics-btn al-go">Active les alertes de match</button>`
+    : `<a class="more al-more" href="alertes.html">Choisir les alertes ›</a>`;
+  const alertBlock = () => al.state ? `<section class="blk white al-card" id="al-card" aria-labelledby="al-h"><h2 class="h cond" id="al-h">Alertes de match</h2>
+    <div class="al-body">${alertBody()}</div><p class="al-msg" role="status">${esc(al.msg)}</p></section>` : "";
+  function paintAlert() {
+    const card = document.getElementById("al-card");
+    if (!card) return;
+    if (al.state === "fait") { card.querySelector(".al-body").innerHTML = alertBody(); card.querySelector(".al-more").focus(); }
+    card.querySelector(".al-msg").textContent = al.msg; // zone role=status gardée telle quelle : le message est lu
+  }
+  function activate() {
+    if (al.busy) return;
+    if (!al.reg || !al.key) { al.msg = "Alertes pas encore prêtes (relais Tricolore ou service worker). Réessaie dans un moment."; paintAlert(); return; }
+    const p = T.pushPrefs();
+    const pending = T.pushSubscribe(al.reg, al.key, Object.values(p).some(Boolean) ? p : { debut: true, buts: true, final: true });
+    al.busy = true; al.msg = "Activation…"; paintAlert();
+    pending.then(() => { al.state = "fait"; al.msg = "C’est parti : tu seras averti pendant les matchs du CH."; },
+      (e) => { al.msg = Notification.permission === "denied" ? "Notifications refusées pour Tricolore (réglages de l’appareil)." : `Activation impossible (${e.message || "erreur"}).`; })
+      .finally(() => { al.busy = false; paintAlert(); });
+  }
+
   function footer(d) {
     const failed = Object.keys(SOURCE_LABEL).filter((n) => d.errors[n]).map((n) => SOURCE_LABEL[n])
       .concat(Object.values(d.meta?.news || {}).filter((s) => !s.ok).map((s) => `Nouvelles (${s.name})`));
@@ -270,7 +310,7 @@
     const me = byAbbr[MTL];
     seasonText = T.season(d.schedule?.currentSeason || me?.seasonId);
     const parts = [
-      () => `<div id="hero-slot">${hero(d, byAbbr)}</div>`, () => staleBanner(d), () => band(d, me), () => results(d), () => sleeve,
+      () => `<div id="hero-slot">${hero(d, byAbbr)}</div>`, () => staleBanner(d), alertBlock, () => band(d, me), () => results(d), () => sleeve,
       () => standings(d, me, all), () => series(d, me, all), () => sleeve, () => news(d),
     ];
     const app = document.getElementById("app");
@@ -284,7 +324,7 @@
     document.getElementById("foot").innerHTML = footer(d);
   }
 
-  T.load(SOURCES).then((d) => {
+  Promise.all([T.load(SOURCES), alertSetup()]).then(([d]) => {
     render(d);
     startLive();
     tickCountdown();
@@ -327,7 +367,10 @@
     ind.setAttribute("role", "status");
     show("", "");
     document.body.append(ind);
-    document.getElementById("app").addEventListener("click", (e) => { if (e.target.closest(".stamp-btn")) refresh(); });
+    document.getElementById("app").addEventListener("click", (e) => {
+      if (e.target.closest(".stamp-btn")) refresh();
+      else if (e.target.closest(".al-go")) activate();
+    });
     const PULL = 80; // px de glissement du doigt
     let y0 = null, x0 = 0, ready = false;
     addEventListener("touchstart", (e) => {
