@@ -4,46 +4,22 @@
 // iPhone (iOS 16.4+) : les alertes ne marchent que depuis l'icône de l'écran d'accueil (mode « standalone »).
 (function () {
   "use strict";
-  const { esc, WORKER, WORDMARK, UNOFFICIAL, errBox } = T;
+  const { esc, WORDMARK, UNOFFICIAL, errBox } = T;
   const app = document.getElementById("app");
   const KINDS = [
     ["debut", "Début du match", "« Le match commence »"],
     ["buts", "Buts", "Les deux équipes : qui a marqué, le pointage, la période"],
     ["final", "Final", "Le pointage final"],
   ];
-  const STORE = "tricolore.alertes"; // choix enregistrés sur cet appareil (le Worker garde les mêmes)
-
-  const iOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-  const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  const { iOS, standalone, push: supported } = T.pushDevice();
+  const { pushPrefs: loadPrefs, savePushPrefs: savePrefs, pushPost: post } = T;
 
   let reg = null, key = null, busy = false, msg = "";
 
   const head = `<section class="hero page-hero"><div class="top"><div class="wordmark">${WORDMARK}</div><div class="lbl"><a class="back" href="./">‹ Match</a></div></div>
     <h1 class="page-title cond">Alertes<br><span>de match</span></h1></section>`;
 
-  function loadPrefs() {
-    try {
-      const p = JSON.parse(localStorage.getItem(STORE) || "null");
-      if (p && typeof p === "object") return { debut: p.debut !== false, buts: p.buts !== false, final: p.final !== false };
-    } catch { /* stockage indisponible : choix par défaut */ }
-    return { debut: true, buts: true, final: true };
-  }
-  function savePrefs(p) { try { localStorage.setItem(STORE, JSON.stringify(p)); } catch { /* rien */ } }
   const readPrefs = () => Object.fromEntries(KINDS.map(([k]) => [k, !!document.getElementById(`al-${k}`)?.checked]));
-
-  function b64uToBytes(s) {
-    const bin = atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4));
-    return Uint8Array.from(bin, (c) => c.charCodeAt(0));
-  }
-
-  async function post(path, body) {
-    const r = await fetch(WORKER + path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), cache: "no-store" });
-    let j = null;
-    try { j = await r.json(); } catch { /* corps illisible */ }
-    if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
-    return j;
-  }
 
   const show = (html) => { app.innerHTML = head + html; };
   const note = () => `<p class="ics-note al-msg" role="status" aria-live="polite">${esc(msg)}</p>`;
@@ -78,17 +54,9 @@
   function enable() {
     const prefs = readPrefs();
     if (!Object.values(prefs).some(Boolean)) { msg = "Cochez au moins une alerte."; render(null); return; }
-    // subscribe() tout de suite, dans le geste de l'utilisateur (exigé par Safari) : il demande aussi la permission.
-    const pending = reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(key) });
+    const pending = T.pushSubscribe(reg, key, prefs); // dans le geste de l'utilisateur (exigé par Safari)
     busy = true; msg = "Activation…"; render(null);
-    pending.then(async (sub) => {
-      try {
-        await post("/push/subscribe", { subscription: sub.toJSON(), prefs });
-      } catch (e) {
-        await sub.unsubscribe().catch(() => {});
-        throw e;
-      }
-      savePrefs(prefs);
+    pending.then((sub) => {
       busy = false; msg = "C’est parti : vous serez averti pendant les matchs du CH."; render(sub);
     }).catch((e) => {
       busy = false;
@@ -123,10 +91,7 @@
       await navigator.serviceWorker.register("sw.js", { scope: "./" });
       reg = await navigator.serviceWorker.ready;
     } catch (e) { return show(`<section class="blk">${errBox("Alertes", `service worker : ${e.message}`, false)}</section>`); }
-    try { key = (await T.getJson(`${WORKER}/push/vapid-public-key`)).key; } catch (e) {
-      return show(`<section class="blk">${errBox("Alertes", `relais Tricolore : ${e.message}`, false)}</section>`);
-    }
-    if (typeof key !== "string" || !/^[A-Za-z0-9_-]{80,100}$/.test(key)) return show(`<section class="blk">${errBox("Alertes", "clé du relais invalide", false)}</section>`);
+    try { key = await T.pushKey(); } catch (e) { return show(`<section class="blk">${errBox("Alertes", e.message, false)}</section>`); }
     const sub = await reg.pushManager.getSubscription();
     render(sub);
     // Abonnement déjà présent : on le redonne au Worker (aucune écriture s'il le connaît déjà; utile si l'adresse a changé).

@@ -102,6 +102,60 @@ window.T = (() => {
     return r.json();
   }
 
+  // ---- Alertes de match (Web Push) : abonnement partagé par l'accueil (app.js) et la page Alertes (alertes.js) ----
+  // Ce que l'appareil permet. iPhone et iPad : les alertes marchent seulement depuis l'icône de l'écran d'accueil (iOS 16.4+).
+  function pushDevice(nav = navigator, win = window) {
+    const ua = nav.userAgent || "";
+    const iOS = /iPhone|iPad|iPod/.test(ua) || (nav.platform === "MacIntel" && nav.maxTouchPoints > 1);
+    return {
+      iOS,
+      safari: /Version\/[\d.]+.*Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|GSA\//.test(ua),
+      standalone: !!win.matchMedia?.("(display-mode: standalone)").matches || nav.standalone === true,
+      push: "serviceWorker" in nav && "PushManager" in win && "Notification" in win,
+      denied: win.Notification?.permission === "denied",
+    };
+  }
+  // Carte de l'accueil : "installer" (iPhone ou iPad dans Safari, hors de l'écran d'accueil), "activer" (push possible,
+  // pas abonné) ou "" (pas de carte : déjà abonné, notifications refusées, ou push impossible dans ce navigateur).
+  function alertCard(dev, subscribed) {
+    if (dev.iOS && !dev.standalone) return dev.safari ? "installer" : "";
+    return dev.push && !dev.denied && !subscribed ? "activer" : "";
+  }
+
+  const PUSH_STORE = "tricolore.alertes"; // choix enregistrés sur cet appareil (le Worker garde les mêmes)
+  function pushPrefs() {
+    try {
+      const p = JSON.parse(localStorage.getItem(PUSH_STORE) || "null");
+      if (p && typeof p === "object") return { debut: p.debut !== false, buts: p.buts !== false, final: p.final !== false };
+    } catch { /* stockage indisponible : choix par défaut */ }
+    return { debut: true, buts: true, final: true };
+  }
+  function savePushPrefs(p) { try { localStorage.setItem(PUSH_STORE, JSON.stringify(p)); } catch { /* rien */ } }
+
+  async function pushPost(path, body) {
+    const r = await fetch(WORKER + path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), cache: "no-store" });
+    let j = null;
+    try { j = await r.json(); } catch { /* corps illisible */ }
+    if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`);
+    return j;
+  }
+  async function pushKey() {
+    let key;
+    try { key = (await getJson(`${WORKER}/push/vapid-public-key`)).key; } catch (e) { throw new Error(`relais Tricolore : ${e.message}`); }
+    if (typeof key !== "string" || !/^[A-Za-z0-9_-]{80,100}$/.test(key)) throw new Error("clé du relais invalide");
+    return key;
+  }
+  const b64uToBytes = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+  // À appeler dans le geste de l'utilisateur : Safari exige que subscribe() (qui demande aussi la permission) parte tout de suite.
+  // Si le relais refuse, l'abonnement du navigateur est retiré (pas d'abonnement que le Worker ne connaît pas).
+  function pushSubscribe(reg, key, prefs) {
+    return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uToBytes(key) }).then(async (sub) => {
+      try { await pushPost("/push/subscribe", { subscription: sub.toJSON(), prefs }); } catch (e) { await sub.unsubscribe().catch(() => {}); throw e; }
+      savePushPrefs(prefs);
+      return sub;
+    });
+  }
+
   // Lit data/meta.json et data/<nom>.json en même temps (un seul aller-retour réseau), puis meta.json décide :
   // une source marquée en échec est écartée même si son ancien fichier a été reçu (pas de données périmées).
   async function load(names) {
@@ -171,5 +225,6 @@ window.T = (() => {
   }).join("");
 
   return { TZ, MTL, LIVE, DONE, esc, loc, fin, cap, num, F, fStamp, pct, gaa, signed, season, age, tvOf, outcome,
-    WORKER, POLL_MS, liveSocket, WORDMARK, UNOFFICIAL, ALERTES, errBox, getJson, load, footer, sections, lastGoal };
+    WORKER, POLL_MS, liveSocket, WORDMARK, UNOFFICIAL, ALERTES, errBox, getJson, load, footer, sections, lastGoal,
+    pushDevice, alertCard, pushPrefs, savePushPrefs, pushPost, pushKey, pushSubscribe };
 })();

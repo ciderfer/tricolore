@@ -8,11 +8,4 @@
 .al-opt input:checked{background:var(--white);box-shadow:inset 0 0 0 6px var(--white),inset 0 0 0 13px var(--blue)}
 .al-opt input:focus-visible{outline:3px solid var(--white);outline-offset:2px}
 .al-opts:disabled .al-opt{opacity:.6;cursor:default}
-button.ics-btn{width:100%;border:0;border-radius:0;font-family:inherit;cursor:pointer}
-button.ics-btn:disabled{opacity:.6;cursor:default}
-button.ics-btn:focus-visible{outline:3px solid var(--white);outline-offset:2px}
 .al-off::before{content:"−"}
-.al-msg:empty{display:none}
-.al-steps{margin:14px 0 0;padding-left:24px;font-weight:600;line-height:1.4}
-.al-steps li{margin:0 0 10px}
-.al-steps b{font-weight:900}
