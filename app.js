@@ -310,7 +310,7 @@
     const me = byAbbr[MTL];
     seasonText = T.season(d.schedule?.currentSeason || me?.seasonId);
     const parts = [
-      () => `<div id="hero-slot">${hero(d, byAbbr)}</div>`, alertBlock, () => staleBanner(d), () => band(d, me), () => results(d), () => sleeve,
+      () => `<div id="hero-slot">${hero(d, byAbbr)}</div>`, () => staleBanner(d), alertBlock, () => band(d, me), () => results(d), () => sleeve,
       () => standings(d, me, all), () => series(d, me, all), () => sleeve, () => news(d),
     ];
     const app = document.getElementById("app");
