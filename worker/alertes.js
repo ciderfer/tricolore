@@ -3,11 +3,9 @@
 // Stockage (KV, liaison ALERTES) :
 //   « sub:<empreinte> » : un abonné par clé, tout dans les métadonnées { e: endpoint, k: p256dh, a: auth, p: "dbf" }.
 //       Une seule opération list() rend donc tous les abonnés, sans lecture par abonné.
-//   « etat » : ce qui a déjà été envoyé, par match : { g: { <id>: { d: 1 (début), b: [eventId des buts], f: 1 (final),
+// « etat » (dans l'objet Envoi, envoi.js; autrefois dans ce KV) : ce qui a déjà été envoyé, par match : { g: { <id>: { d: 1 (début), b: [eventId des buts], f: 1 (final),
 //       m: [buts disparus une fois de la feuille], e: { <eventId>: équipe du but } } } }.
-// Budget KV (gratuit : 1 000 écritures, 1 000 list et 100 000 lectures par jour) : la minuterie ne lit « etat » que
-// pendant un match (ou peu après), et n'écrit que quand un événement est détecté (au plus ~10 écritures par match).
-// Jamais d'écriture à chaque minute.
+// « etat » n'est noté que quand un événement est détecté (au plus ~10 écritures par match), jamais à chaque minute.
 // Aucune donnée inventée : les messages ne reprennent que ce que l'API LNH rend (noms, pointage, période, temps).
 import { sendPush, vapidAuth } from "./push.js";
 
@@ -222,6 +220,16 @@ async function getJson(base, path) {
   return r.json();
 }
 
+const envoi = (env) => env.ENVOI.get(env.ENVOI.idFromName("alertes"));
+
+// Garde seulement les KEEP_GAMES matchs les plus récents dans « etat ».
+export function noteRec(etat, id, rec) {
+  const g = { ...(etat.g || {}), [id]: rec };
+  const ids = Object.keys(g).sort();
+  for (const k of ids.slice(0, Math.max(0, ids.length - KEEP_GAMES))) delete g[k];
+  return { ...etat, g };
+}
+
 // Une exécution de la minuterie (chaque minute). Rend un petit bilan (pour les journaux et les tests).
 export async function runAlertes(env, nowMs = Date.now()) {
   if (!env.ALERTES || !env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY || !env.VAPID_SUBJECT) return { skipped: "config" };
@@ -229,14 +237,16 @@ export async function runAlertes(env, nowMs = Date.now()) {
   const game = pickGame(await getJson(base, "/v1/scoreboard/MTL/now"), nowMs);
   if (!game) return { skipped: "aucun match" };
 
-  const etat = (await env.ALERTES.get("etat", "json")) || { g: {} };
-  const rec = etat.g?.[game.id] || null;
-  if (DONE.has(game.gameState) && (!rec || rec.f)) return { skipped: "terminé", game: game.id };
   let landing = null;
-  try { landing = await getJson(base, `/v1/gamecenter/${game.id}/landing`); } catch (e) { console.error(e.message); }
-
-  const { events, rec: next } = detect(game, landing, rec);
-  if (!next) return { game: game.id, events: 0, sent: 0 };
+  if (LIVE.has(game.gameState) || DONE.has(game.gameState)) {
+    try { landing = await getJson(base, `/v1/gamecenter/${game.id}/landing`); } catch (e) { console.error(e.message); }
+  }
+  // Lire, décider et noter « etat » se fait d'un bloc dans l'objet Envoi (cohérence forte, une requête à la fois) :
+  // deux minuteries qui se chevauchent ne peuvent pas annoncer le même but deux fois.
+  const r0 = await envoi(env).fetch("https://envoi/etat", { method: "POST", body: JSON.stringify({ game, landing }) });
+  if (!r0.ok) throw new Error(`objet Envoi (etat) : HTTP ${r0.status}`);
+  const events = await r0.json();
+  if (!events.length) return { game: game.id, events: 0, sent: 0 };
 
   // Un envoi par abonné et par événement, dans l'ordre. Les BATCH premiers partent tout de suite; la suite est
   // confiée à l'objet « Envoi » (envoi.js), qui l'envoie par lots, une alarme par lot (quelques secondes en tout).
@@ -246,14 +256,10 @@ export async function runAlertes(env, nowMs = Date.now()) {
   const r = await sendBatch(env, items.slice(0, BATCH), nowMs);
   if (later.length) {
     try {
-      const r2 = await env.ENVOI.get(env.ENVOI.idFromName("alertes")).fetch("https://envoi/", { method: "POST", body: JSON.stringify(later) });
+      const r2 = await envoi(env).fetch("https://envoi/", { method: "POST", body: JSON.stringify(later) });
       if (!r2.ok) throw new Error(`HTTP ${r2.status}`);
     } catch (e) { console.error(`alertes : ${later.length} envois perdus (objet Envoi : ${e.message})`); }
   }
-  etat.g = { ...(etat.g || {}), [game.id]: next };
-  const ids = Object.keys(etat.g).sort();
-  for (const id of ids.slice(0, Math.max(0, ids.length - KEEP_GAMES))) delete etat.g[id];
-  await env.ALERTES.put("etat", JSON.stringify(etat)); // seule écriture de la minuterie : quand il y a du nouveau
   return { game: game.id, events: events.length, ...r, queued: later.length };
 }
 

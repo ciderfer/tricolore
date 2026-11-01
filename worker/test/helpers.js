@@ -2,6 +2,7 @@
 // rejoués étape par étape, abonné de test (clés générées) et déchiffrement RFC 8291.
 import { readFileSync } from "node:fs";
 import { b64u, unb64u } from "../push.js";
+import { Envoi } from "../envoi.js";
 
 const fx = (n) => JSON.parse(readFileSync(new URL(`./fixtures/${n}`, import.meta.url), "utf8"));
 export const LANDING = fx("2026020141-landing.json");
@@ -110,4 +111,27 @@ export async function testVapid() {
   const jwk = await crypto.subtle.exportKey("jwk", kp.privateKey);
   const pub = new Uint8Array(await crypto.subtle.exportKey("raw", kp.publicKey));
   return { VAPID_PUBLIC_KEY: b64u(pub), VAPID_PRIVATE_KEY: jwk.d, VAPID_SUBJECT: "mailto:test@example.com", verifyKey: kp.publicKey };
+}
+
+// Faux contexte de Durable Object : stockage trié (avec compteur d'écritures), alarme, et blockConcurrencyWhile
+// qui sérialise vraiment les appels (comme Cloudflare : aucune autre requête pendant le bloc).
+export function doCtx() {
+  const m = new Map();
+  let alarm = null, chain = Promise.resolve();
+  const c = { m, writes: 0, storage: {
+    get: async (k) => structuredClone(m.get(k)), put: async (k, v) => { c.writes++; m.set(k, structuredClone(v)); }, delete: async (k) => m.delete(k),
+    list: async ({ prefix = "", limit = Infinity }) => new Map([...m].filter(([k]) => k.startsWith(prefix)).sort(([a], [b]) => (a < b ? -1 : 1)).slice(0, limit)),
+    getAlarm: async () => alarm, setAlarm: async (t) => { alarm = t; },
+    takeAlarm() { const a = alarm; alarm = null; return a; },
+  },
+  blockConcurrencyWhile(fn) { const r = chain.then(fn); chain = r.catch(() => {}); return r; } };
+  return c;
+}
+
+// Branche un objet Envoi (un seul, comme en production) sur env.ENVOI. Rend { envoi, ctx }.
+export function withEnvoi(env) {
+  const ctx = doCtx();
+  const envoi = new Envoi(ctx, env);
+  env.ENVOI = { idFromName: (n) => n, get: () => ({ fetch: (url, init) => envoi.fetch(new Request(url, init)) }) };
+  return { envoi, ctx };
 }
