@@ -1,18 +1,18 @@
 {
  "source": "ESPN",
  "url": "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/injuries",
- "fetchedAt": "2026-11-03T18:30:49.777Z",
- "updatedAt": "2026-11-02T15:45:30.882Z",
+ "fetchedAt": "2026-11-03T19:15:47.107Z",
+ "updatedAt": "2026-11-03T19:15:47.107Z",
  "players": [
   {
    "name": "Kirby Dach",
    "firstName": "Kirby",
    "lastName": "Dach",
    "pos": "C",
-   "status": "Day-To-Day",
+   "status": "Out",
    "type": "Illness",
-   "returnDate": "2026-11-03",
-   "updated": "2026-11-02T15:22Z"
+   "returnDate": "2026-11-05",
+   "updated": "2026-11-03T19:06Z"
   },
   {
    "name": "Mike Matheson",
