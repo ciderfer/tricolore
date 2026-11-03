@@ -28,7 +28,7 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 | `data/` | `schedule.json`, `scoreboard.json`, `standings.json`, `news.json`, `meta.json`, `injuries.json` (blessés, ESPN) |
 | `.github/workflows/data.yml` | Mise à jour des données aux 15 minutes (et sur demande) |
 | `.github/workflows/pages.yml` | Déploiement sur GitHub Pages depuis `main`. Ajoute `?v=<empreinte>` aux JS et CSS dans le HTML (empreinte du contenu du code) pour que les navigateurs ne gardent pas un ancien fichier après un déploiement |
-| `.github/workflows/surveillance.yml`, `scripts/surveillance.mjs`, `scripts/etat.mjs` | Surveillance des données : ouvre une issue GitHub (donc un courriel) si le site n’a pas vérifié ses données depuis 90 min ou si une source de la LNH est en échec depuis plus de 2 h, et la ferme au retour à la normale. Voir « Surveillance » plus bas |
+| `.github/workflows/surveillance.yml`, `scripts/surveillance.mjs`, `scripts/etat.mjs` | Surveillance des données : ouvre une issue GitHub (donc un courriel) si le site n’a pas vérifié ses données depuis 90 min, si une source de la LNH est en échec depuis plus de 2 h ou si le `GH_TOKEN` du Worker expire dans 14 jours ou moins, et la ferme au retour à la normale. Voir « Surveillance » plus bas |
 | `tests/` | Tests de la logique pure (surveillance, dernier but, blessés) : `node --test tests/*.test.mjs` |
 | `.github/dependabot.yml` | Mises à jour hebdomadaires des actions GitHub, fixées par SHA dans les workflows |
 | `worker/` | Proxy Cloudflare pour le pointage en direct, minuterie chaque minute (tâche de données aux 15 minutes, secret `GH_TOKEN` : jeton GitHub limité à ce repo, permission Actions en écriture; alertes de match) et envoi Web Push (`alertes.js`, `push.js`; tests : `npm test`) |
@@ -47,7 +47,7 @@ python3 -m http.server 8000
 ## Surveillance
 
 - `.github/workflows/surveillance.yml` lit `data/meta.json` sur le site publié (horaire de GitHub aux :23 et :53, et sur demande).
-- Problème si : `checkedAt` a plus de 90 min, une source de la LNH (`sources.*`) est en échec depuis plus de 2 h (champ `since`, noté par `fetch-data.mjs` au début de la panne), ou `meta.json` est illisible après 3 essais.
+- Problème si : `checkedAt` a plus de 90 min, une source de la LNH (`sources.*`) est en échec depuis plus de 2 h (champ `since`, noté par `fetch-data.mjs` au début de la panne), ou `meta.json` est illisible après 3 essais. Aussi : le `GH_TOKEN` du Worker expire dans 14 jours ou moins (`GH_TOKEN_EXPIRES` dans `scripts/etat.mjs`).
 - Une seule issue « Tricolore : données en panne » à la fois, qui mentionne @ciderfer. Tant que le problème dure, son texte est mis à jour sans nouveau courriel. Au retour à la normale, un commentaire est ajouté et l’issue est fermée.
 - Les sources de nouvelles ne sont pas surveillées (un flux RSS en panne n’empêche pas le site de fonctionner).
 - Essai en local, sans toucher aux issues : `node scripts/surveillance.mjs` (sans `GITHUB_TOKEN`, le script affiche seulement son diagnostic).
@@ -149,7 +149,7 @@ npm run deploy
 
 - Le Worker n’est pas déployé par GitHub Actions pour l’instant (pas de jeton d’API).
 - Test local : `npm run dev` dans `worker/`, puis ouvrir le site avec `?worker=http://localhost:8787`.
-- Le `GH_TOKEN` du Worker expire le **dimanche 17 janvier 2027**. Le renouveler avant cette date dans GitHub › Settings › Developer settings › Fine-grained tokens, puis faire `npx wrangler secret put GH_TOKEN` dans `worker/`. S’il expire, la minuterie échoue sans avertissement; l’horaire GitHub (:08 et :38) prend le relais, moins fiable.
+- Le `GH_TOKEN` du Worker expire le **dimanche 17 janvier 2027**. S’il expire, la minuterie échoue sans avertissement; l’horaire GitHub (:08 et :38) prend le relais, moins fiable. La surveillance ouvre une issue 14 jours avant (`GH_TOKEN_EXPIRES` dans `scripts/etat.mjs`). Pour le renouveler : GitHub › Settings › Developer settings › Fine-grained tokens, nouveau jeton limité à ce repo avec la permission Actions en écriture, puis `npx wrangler secret put GH_TOKEN` dans `worker/`, puis la nouvelle date dans `GH_TOKEN_EXPIRES` et ici. L’issue se ferme au passage suivant.
 
 ## Nouvelles
 
