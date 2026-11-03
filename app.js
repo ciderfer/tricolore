@@ -83,7 +83,7 @@
     const hr = (t) => rec(t.homeWins, t.homeLosses, t.homeOtLosses), rr = (t) => rec(t.roadWins, t.roadLosses, t.roadOtLosses);
     const streak = (t) => STREAK_FR[t.streakCode] && Number.isFinite(t.streakCount) ? `${t.streakCount} ${STREAK_FR[t.streakCode]}` : "—";
     const goals = (t) => Number.isFinite(t.goalFor) && Number.isFinite(t.goalAgainst) ? `${t.goalFor}-${t.goalAgainst}` : "—";
-    const row = (label, x, y, t) => `<div class="faf-r"><span class="faf-l">${label}</span><span class="faf-v${t ? " t" : ""}">${x}</span><span class="faf-v${t ? " t" : ""}">${y}</span></div>`;
+    const row = (label, x, y, t, cls = "") => `<div class="faf-r${cls}"><span class="faf-l">${label}</span><span class="faf-v${t ? " t" : ""}">${x}</span><span class="faf-v${t ? " t" : ""}">${y}</span></div>`;
     const vs = (d.schedule?.games || []).filter((x) => x.gameType === g.gameType && [x.homeTeam.abbrev, x.awayTeam.abbrev].includes(opp.abbr))
       .sort((p, q) => p.startTimeUTC.localeCompare(q.startTimeUTC));
     const i = vs.findIndex((x) => x.id === g.id);
@@ -94,7 +94,7 @@
       return `${code} ${us}-${them}${extra ? ` ${extra}` : ""} le ${esc(fShort.format(new Date(x.startTimeUTC)))}`;
     });
     const asOf = a.date ? new Intl.DateTimeFormat("fr-CA", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(a.date + "T12:00:00Z")) : "";
-    return `<div class="faf" aria-label="Face-à-face"><div class="faf-r faf-h"><span class="lbl">Face-à-face</span><span class="cond">Canadien</span><span class="cond">${esc(opp.name)}</span></div>
+    return `<div class="faf" role="group" aria-label="Face-à-face"><div class="faf-r faf-h"><span class="lbl">Face-à-face</span><span class="cond">Canadien</span><span class="cond">${esc(opp.name)}</span></div>
       ${row("Fiche", rec(a.wins, a.losses, a.otLosses), rec(b.wins, b.losses, b.otLosses))}
       ${row("Points", `${a.points}`, `${b.points}`)}
       ${row("Division", `${rang(a.divisionSequence)} ${DIV_FR[a.divisionAbbrev] || ""}`, `${rang(b.divisionSequence)} ${DIV_FR[b.divisionAbbrev] || ""}`, true)}
@@ -102,6 +102,7 @@
       ${row("Buts pour-contre", goals(a), goals(b))}
       ${home ? row("Domicile / étranger", hr(a), rr(b)) : row("Étranger / domicile", rr(a), hr(b))}
       ${row("Séquence", streak(a), streak(b))}
+      ${row("Matchs joués", num(a.gamesPlayed), num(b.gamesPlayed), false, " faf-pj")}
       ${past.length ? `<p class="faf-p"><span class="faf-l">Déjà cette saison</span> ${past.join(" · ")}</p>` : ""}
       <p class="faf-n">${nth ? `${nth}. ` : ""}Classement LNH${asOf ? ` au ${esc(asOf)}` : ""}.${past.length ? " Pointage du CH en premier." : ""}</p></div>`;
   }
@@ -139,7 +140,7 @@
   const rang = (n) => (n === 1 ? "1<sup>re</sup>" : `${n}<sup>e</sup>`);
   function band(d, me) {
     if (!me) return `<section class="band"><div class="rec">${errBox("Classement", d.errors.standings || "équipe introuvable")}</div></section>`;
-    return `<section class="band" aria-label="Fiche du Canadien"><div class="rec">
+    return `<section class="band fiche" aria-label="Fiche du Canadien"><div class="rec">
       <div class="big num">${me.wins}-${me.losses}-${me.otLosses}</div>
       <div class="pts num">${me.points}<span>PTS</span></div>
       <div class="rank"><span>${rang(me.divisionSequence)} Atlantique</span><br><span>${rang(me.conferenceSequence)} dans l’Est</span><br><span>${me.gamesPlayed} match${me.gamesPlayed > 1 ? "s" : ""} joué${me.gamesPlayed > 1 ? "s" : ""}</span></div>

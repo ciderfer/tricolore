@@ -424,6 +424,8 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
 .faf-v.t{font-family:Archivo,sans-serif;font-weight:800;font-size:13.5px;white-space:normal}
 .faf-p{margin:10px 8px 0;font-weight:800;font-size:15px}
 .faf-n{margin:8px 8px 0;font-size:13px;font-weight:600;color:#ffd9dc}
+/* Téléphone : la fiche du CH est déjà dans le face-à-face (avec les matchs joués), pas de bandeau en double */
+@media (max-width:1023px){#app:has(.faf)>.fiche{display:none}}
 @media (max-width:359px){.faf-r{grid-template-columns:minmax(0,1fr) 80px 80px;padding:6px}.faf-l{font-size:12px}}
 /* Focus clavier visible (clavier Bluetooth, accès complet au clavier d'iOS) */
 a:focus-visible{outline:3px solid var(--white);outline-offset:2px}
@@ -458,6 +460,7 @@ a:focus-visible{outline:3px solid var(--white);outline-offset:2px}
   .faf-v{font-size:19px}
   .faf-v.t{font-size:15px}
   .faf-p,.faf-n{margin-left:10px;margin-right:10px}
+  .faf-pj{display:none} /* ordi : les matchs joués restent dans le bandeau de la fiche */
   .rec{display:flex;align-items:center;justify-content:space-between;gap:28px}
   .rec .rank{display:flex;gap:28px;font-size:22px;font-weight:800;font-stretch:87.5%;color:var(--white)}
   .rec .rank br{display:none}
