@@ -13,7 +13,8 @@
 // Envoyés seulement quand ils changent, plus {"part":"ping"} après 25 s sans rien.
 // À la connexion : ce qu'on a, seulement si c'est encore frais (lu il y a au plus un intervalle de lecture). Sinon
 // (alarme arrêtée faute de partisans, objet resté en mémoire), on lit la LNH d'abord : sans ça, le premier pointage
-// affiché pouvait dater de la dernière lecture (30 s, voire des minutes) jusqu'à l'alarme suivante. Match fini : dernier envoi complet, puis fermeture (code 1000). Pas un match du Canadien : 4404.
+// affiché pouvait dater de la dernière lecture (30 s, voire des minutes) jusqu'à l'alarme suivante. Match fini : dernier envoi complet, puis fermeture (code 1000).
+// Pas un match du Canadien : refusé par le Worker (index.js) avant de créer l'objet.
 const UPSTREAM = "https://api-web.nhle.com";
 const LIVE = new Set(["LIVE", "CRIT"]);
 const DONE = new Set(["OFF", "FINAL"]);
@@ -82,7 +83,7 @@ export class Direct {
     if (next) await this.ctx.storage.setAlarm(Date.now() + next);
   }
 
-  // Une lecture. Rend le délai avant la prochaine (ms), ou 0 : plus personne, match fini ou pas du Canadien.
+  // Une lecture. Rend le délai avant la prochaine (ms), ou 0 : plus personne ou match fini.
   poll() {
     this.polling ??= this.read().finally(() => { this.polling = null; });
     return this.polling;
@@ -97,14 +98,7 @@ export class Direct {
     if (land.text) {
       let j = null;
       try { j = JSON.parse(land.text); } catch { land.error = "réponse LNH illisible"; land.text = null; }
-      if (j) {
-        if (j.awayTeam?.abbrev !== "MTL" && j.homeTeam?.abbrev !== "MTL") {
-          for (const ws of this.ctx.getWebSockets()) ws.close(4404, "match du Canadien seulement");
-          return 0;
-        }
-        state = j.gameState;
-        this.state = state;
-      }
+      if (j) { state = j.gameState; this.state = state; }
     }
     this.send("landing", land, now);
     const done = DONE.has(state);
