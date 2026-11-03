@@ -413,7 +413,18 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
   .cd-row{grid-template-columns:repeat(3,1fr)}
   .cd-s{display:none} /* pas de secondes qui défilent */
 }
-.faf{display:none}
+/* Face-à-face (accueil, sous le prochain match) */
+.faf{margin:20px 18px 0}
+.faf-r{display:grid;grid-template-columns:minmax(0,1fr) 92px 92px;gap:8px;align-items:baseline;padding:6px 8px;font-weight:700;font-size:15px}
+.faf-r:nth-child(odd):not(.faf-h){background:var(--zebra-red)}
+.faf-h{padding-bottom:6px}
+.faf-h .cond{font-size:19px;text-align:right;overflow-wrap:anywhere}
+.faf-l{color:#ffd9dc;font-size:13px;font-weight:600}
+.faf-v{text-align:right;font-family:Graduate,serif;font-weight:400;font-size:17px;white-space:nowrap}
+.faf-v.t{font-family:Archivo,sans-serif;font-weight:800;font-size:13.5px;white-space:normal}
+.faf-p{margin:10px 8px 0;font-weight:800;font-size:15px}
+.faf-n{margin:8px 8px 0;font-size:13px;font-weight:600;color:#ffd9dc}
+@media (max-width:359px){.faf-r{grid-template-columns:minmax(0,1fr) 80px 80px;padding:6px}.faf-l{font-size:12px}}
 /* Focus clavier visible (clavier Bluetooth, accès complet au clavier d'iOS) */
 a:focus-visible{outline:3px solid var(--white);outline-offset:2px}
 .white a:focus-visible,.white button:focus-visible,.series a:focus-visible,.cg.next a:focus-visible{outline-color:var(--blue)}
@@ -439,16 +450,14 @@ a:focus-visible{outline:3px solid var(--white);outline-offset:2px}
   .hero:has(>.faf)>*{grid-column:1}
   .hero:has(>.faf)>.top{grid-column:1/-1}
   .hero:has(>.faf)>.kick{justify-self:start}
-  .faf{display:block;grid-column:2!important;grid-row:2/span 5;align-self:center;margin-right:18px}
+  .faf{grid-column:2!important;grid-row:2/span 5;align-self:center;margin:0 18px 0 0}
   .hero:has(>.faf)>.cd{grid-column:1/-1}
-  .faf-r{display:grid;grid-template-columns:1fr 120px 120px;gap:10px;align-items:baseline;padding:7px 10px;font-weight:700;font-size:16px}
-  .faf-r:nth-child(odd):not(.faf-h){background:var(--zebra-red)}
-  .faf-h{padding-bottom:6px}
-  .faf-h .cond{font-size:22px;text-align:right;overflow-wrap:anywhere}
-  .faf-l{color:#ffd9dc;font-size:14px;font-weight:600}
-  .faf-v{text-align:right;font-family:Graduate,serif;font-weight:400;font-size:19px;white-space:nowrap}
-  .faf-v.t{font-family:Archivo,sans-serif;font-weight:800;font-size:15px;white-space:normal}
-  .faf-n{margin:10px 10px 0;font-size:13px;font-weight:600;color:#ffd9dc}
+  .faf-r{grid-template-columns:1fr 120px 120px;gap:10px;padding:7px 10px;font-size:16px}
+  .faf-h .cond{font-size:22px}
+  .faf-l{font-size:14px}
+  .faf-v{font-size:19px}
+  .faf-v.t{font-size:15px}
+  .faf-p,.faf-n{margin-left:10px;margin-right:10px}
   .rec{display:flex;align-items:center;justify-content:space-between;gap:28px}
   .rec .rank{display:flex;gap:28px;font-size:22px;font-weight:800;font-stretch:87.5%;color:var(--white)}
   .rec .rank br{display:none}
