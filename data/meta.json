@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-11-04T00:45:39.535Z",
-  "checkedAt": "2026-11-04T00:45:39.535Z",
+  "updatedAt": "2026-11-04T01:00:47.396Z",
+  "checkedAt": "2026-11-04T01:00:47.396Z",
   "sources": {
     "schedule": {
       "ok": true,
@@ -47,7 +47,12 @@
   },
   "joueurs": {
     "ok": true,
-    "count": 25,
-    "failed": []
+    "count": 24,
+    "failed": [
+      {
+        "id": 8482737,
+        "error": "The operation was aborted due to timeout"
+      }
+    ]
   }
 }
