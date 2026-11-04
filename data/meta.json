@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-11-04T20:00:34.165Z",
-  "checkedAt": "2026-11-04T20:00:34.165Z",
+  "updatedAt": "2026-11-04T20:15:49.523Z",
+  "checkedAt": "2026-11-04T20:15:49.523Z",
   "sources": {
     "schedule": {
       "ok": true,
@@ -15,8 +15,10 @@
       "url": "https://api-web.nhle.com/v1/standings/2026-11-04"
     },
     "roster": {
-      "ok": true,
-      "url": "https://api-web.nhle.com/v1/roster/MTL/20262027"
+      "ok": false,
+      "url": "https://api-web.nhle.com/v1/roster/MTL/current",
+      "error": "The operation was aborted due to timeout",
+      "since": "2026-11-04T20:15:26.980Z"
     },
     "stats": {
       "ok": true,
