@@ -1,8 +1,8 @@
 {
  "source": "ESPN",
  "url": "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/injuries",
- "fetchedAt": "2026-11-05T15:15:28.172Z",
- "updatedAt": "2026-11-05T14:30:27.869Z",
+ "fetchedAt": "2026-11-05T16:30:30.561Z",
+ "updatedAt": "2026-11-05T16:30:30.561Z",
  "players": [
   {
    "name": "Ivan Demidov",
@@ -13,26 +13,6 @@
    "type": "Ankle",
    "returnDate": "2026-11-14",
    "updated": "2026-11-04T21:04Z"
-  },
-  {
-   "name": "Nick Suzuki",
-   "firstName": "Nick",
-   "lastName": "Suzuki",
-   "pos": "C",
-   "status": "Day-To-Day",
-   "type": "Hand",
-   "returnDate": "2026-11-05",
-   "updated": "2026-11-04T18:16Z"
-  },
-  {
-   "name": "Kirby Dach",
-   "firstName": "Kirby",
-   "lastName": "Dach",
-   "pos": "C",
-   "status": "Day-To-Day",
-   "type": "Illness",
-   "returnDate": "2026-11-05",
-   "updated": "2026-11-04T15:21Z"
   },
   {
    "name": "Mike Matheson",
