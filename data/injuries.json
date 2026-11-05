@@ -1,8 +1,8 @@
 {
  "source": "ESPN",
  "url": "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/injuries",
- "fetchedAt": "2026-11-05T14:15:28.382Z",
- "updatedAt": "2026-11-05T01:30:27.130Z",
+ "fetchedAt": "2026-11-05T14:30:27.869Z",
+ "updatedAt": "2026-11-05T14:30:27.869Z",
  "players": [
   {
    "name": "Ivan Demidov",
@@ -51,7 +51,7 @@
    "pos": "G",
    "status": "Injured Reserve",
    "type": "Lower Body",
-   "returnDate": "2026-11-05",
+   "returnDate": "2026-11-07",
    "updated": "2026-10-31T15:25Z"
   },
   {
