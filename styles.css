@@ -29,12 +29,14 @@ body{margin:0;background:var(--red);color:var(--white);font:500 18px/1.35 Archiv
 .datebig .day{font-size:min(172px,43vw);line-height:.78;color:var(--white)}
 .datebig .side{padding-bottom:6px}
 .datebig .wd{font-size:min(46px,11.5vw);line-height:.9}
-.datebig .mo{font-size:min(46px,11.5vw);line-height:.9;color:var(--blue);-webkit-text-stroke:0}
+.datebig .mo{font-size:min(46px,11.5vw);line-height:.9;color:#d8dcff;-webkit-text-stroke:0} /* bleu pâle : 5,1:1 sur le rouge */
 .opp{margin:20px 18px 0}
 .opp .vs{font-size:20px;font-weight:800;font-stretch:100%;opacity:.9}
 .opp .name{font-size:84px;line-height:.86;display:block}
 .opp .name.long{font-size:min(84px,17vw)} /* « Hurricanes », « Blackhawks » : un seul mot, ne peut pas passer à la ligne */
 .opp .place{font-size:18px;font-weight:600;display:block;margin-top:6px}
+.when{margin:20px 18px 0;font-size:44px;line-height:.9}
+.when+.time{margin-top:4px}
 .time{margin:14px 18px 0;display:flex;align-items:baseline;gap:12px;font-size:58px;line-height:.9;white-space:nowrap}
 .time .hh{font-family:Archivo;font-stretch:62%;font-weight:900;font-size:.6em;margin:0 .05em}
 .time small{font-family:Archivo;font-stretch:100%;font-weight:800;font-size:13px;letter-spacing:.16em;opacity:.9}
@@ -50,7 +52,7 @@ a.chip{text-decoration:none;display:inline-block;padding:9px 12px} /* bouton de 
 .rec .rank{font-weight:700;font-size:16px;line-height:1.25;color:#d8dcff}
 /* Navigation (Match / Alignement) */
 .tabs{display:flex;gap:6px;background:var(--blue);padding:calc(8px + env(safe-area-inset-top)) 10px 0}
-.tabs a{color:#c3c8f2;text-decoration:none;font-stretch:62%;font-weight:900;font-size:21px;text-transform:uppercase;letter-spacing:.03em;padding:4px 8px 9px}
+.tabs a{color:#d8dcff;text-decoration:none;font-stretch:62%;font-weight:900;font-size:21px;text-transform:uppercase;letter-spacing:.03em;padding:4px 8px 9px}
 .tabs a[aria-current="page"]{color:var(--white);background:var(--red)}
 /* Téléphone : bande d'onglets blanche collante, soulignement rouge qui suit le doigt (navigation.js), glissement entre pages */
 .tabs-ul,.peek{display:none}
@@ -58,7 +60,7 @@ a.chip{text-decoration:none;display:inline-block;padding:9px 12px} /* bouton de 
   html,body{overflow-x:clip}
   .tabs{position:sticky;top:0;z-index:6;gap:0;background:linear-gradient(var(--blue) 0 env(safe-area-inset-top),var(--white) 0);padding:env(safe-area-inset-top) 0 0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain;-webkit-tap-highlight-color:transparent}
   .tabs::-webkit-scrollbar{display:none}
-  .tabs a{flex:none;color:rgba(25,33,104,.45);font-size:19px;padding:12px 13px 11px}
+  .tabs a{flex:none;color:#6a6f9d;font-size:19px;padding:12px 13px 11px}
   .tabs a:first-child{padding-left:18px}
   .tabs a:last-child{padding-right:18px}
   .tabs a[aria-current="page"]{color:var(--blue);background:none}
@@ -85,10 +87,10 @@ a.chip{text-decoration:none;display:inline-block;padding:9px 12px} /* bouton de 
 .page-title{margin:22px 18px 0;font-size:64px;line-height:.86}
 .page-title span{display:block;font-size:38px;color:var(--blue)}
 .leaders-wrap{padding:16px 18px 18px}
-.band-lbl{color:#c3c8f2;margin-bottom:10px}
+.band-lbl{color:#d8dcff;margin-bottom:10px}
 .leaders{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .ldr{background:var(--zebra-blue);padding:6px 8px;min-width:0}
-.ldr .lbl{font-size:11px;letter-spacing:.16em;color:#c3c8f2}
+.ldr .lbl{font-size:12px;letter-spacing:.1em;color:#d8dcff}
 .ldr-v{font-size:52px;line-height:1;margin-top:4px}
 .ldr-n{font-size:20px;line-height:1;margin-top:4px;overflow-wrap:anywhere}
 .grp{margin:16px -18px 0;padding:5px 18px;background:var(--blue)}
@@ -113,15 +115,15 @@ a.nm-link{display:inline-block;padding:10px 0;margin:-10px 0}
 .pj-name span{display:block;font-size:56px;line-height:.86;color:var(--white)}
 .pj-info{margin:18px 18px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
 .pj-info div{min-width:0}
-.pj-info dt{font-size:11px;letter-spacing:.16em;color:#ffd9dc}
+.pj-info dt{font-size:12px;letter-spacing:.1em;color:#ffd9dc}
 .pj-info dd{margin:3px 0 0;font-weight:700;font-size:16px;line-height:1.2}
 .pj-grid{display:grid;grid-template-columns:repeat(4,auto);gap:12px 10px}
 .pj-grid>div{background:var(--zebra-blue);padding:5px 7px;min-width:0}
-.pj-grid .lbl{font-size:11px;letter-spacing:.14em;color:#c3c8f2}
+.pj-grid .lbl{font-size:12px;letter-spacing:.1em;color:#d8dcff}
 .pj-v{font-size:34px;line-height:1;margin-top:4px;white-space:nowrap}
-.pj-team{color:#c3c8f2;margin:16px 0 8px}
+.pj-team{color:#d8dcff;margin:16px 0 8px}
 .pj-none{font-weight:700;margin:0}
-.pj-legend{font-size:13px;font-weight:600;color:#c3c8f2;margin:14px 0 0}
+.pj-legend{font-size:13px;font-weight:600;color:#d8dcff;margin:14px 0 0}
 .l5 .pl{grid-template-columns:62px 1fr auto}
 .l5-date{font-weight:800;font-size:13px;letter-spacing:.06em;text-transform:uppercase;text-align:right;line-height:1.15}
 .l5-pts{font-size:30px;line-height:1}
@@ -133,9 +135,9 @@ table.stats th:first-child,table.stats td:first-child{text-align:left;width:auto
 table.stats td:first-child{font-family:Archivo;color:var(--ink)}
 table.stats td:nth-child(2){font-stretch:100%;font-weight:700;font-size:inherit;text-transform:none}
 table.stats td{font-size:17px;padding-top:7px;padding-bottom:7px}
-table.stats th{font-size:11px;letter-spacing:.08em}
+table.stats th{font-size:12px;letter-spacing:.08em}
 table.stats .nm{font-stretch:62%;font-weight:900;font-size:22px;text-transform:uppercase;letter-spacing:.01em}
-table.stats .ps{font-size:11px;font-weight:800;letter-spacing:.1em;color:#5b5f7e;margin-left:6px}
+table.stats .ps{font-size:12px;font-weight:800;letter-spacing:.1em;color:#5b5f7e;margin-left:6px}
 table.stats td.pts{font-family:Graduate;font-size:19px;color:var(--blue)}
 table.gl td.pts{font-family:Archivo;font-size:17px;font-weight:800}
 table.stats th{text-transform:uppercase}
@@ -160,31 +162,31 @@ table.gl th:nth-child(6),table.gl td:nth-child(6),table.gl th:nth-child(7),table
 .b-no{font-size:16px;color:#7c809e;text-align:right}
 .b-nm{min-width:0;line-height:1}
 .b-nm b{display:block;font-stretch:62%;font-weight:900;font-size:19px;text-transform:uppercase;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
-.b-nm small{display:block;font-size:10.5px;font-weight:800;letter-spacing:.1em;color:#5b5f7e;margin-top:2px;text-transform:uppercase}
+.b-nm small{display:block;font-size:12px;font-weight:800;letter-spacing:.1em;color:#5b5f7e;margin-top:2px;text-transform:uppercase}
 .b-tr{display:flex;height:24px;min-width:0}
 .b-g,.b-a{display:flex;align-items:center;justify-content:center;font-family:Graduate,serif;font-size:13px;color:var(--white);overflow:hidden;min-width:0}
 .b-g{background:var(--red)}.b-a{background:var(--blue)}
 .b-na{align-self:center;font-size:12px;font-weight:700;color:#8a8daa}
 .b-p{font-size:21px;color:var(--blue);text-align:right}
-.ch-scale{margin-top:2px;font-size:11px;font-weight:700;color:#7c809e}
+.ch-scale{margin-top:2px;font-size:12px;font-weight:700;color:#5b5f7e}
 .ch-scale div{grid-column:3;display:flex;justify-content:space-between}
 .prof{background:var(--blue);padding:18px 18px 22px}
-.prof .lbl{color:#c3c8f2}
+.prof .lbl{color:#d8dcff}
 .prof-hd{display:flex;align-items:flex-end;gap:12px;margin:6px 0 4px}
 .prof-no{font-size:56px;line-height:.8;text-shadow:3px 3px 0 var(--red)}
 .prof-nm{font-size:34px;line-height:.9;margin:0;overflow-wrap:anywhere}
-.prof-nm small{display:block;font-family:Archivo,sans-serif;font-stretch:100%;font-weight:700;font-size:13px;text-transform:none;color:#c3c8f2;margin-top:4px;letter-spacing:0}
+.prof-nm small{display:block;font-family:Archivo,sans-serif;font-stretch:100%;font-weight:700;font-size:13px;text-transform:none;color:#d8dcff;margin-top:4px;letter-spacing:0}
 .radar{display:block;width:100%;max-width:330px;height:auto;margin:8px auto 0;overflow:visible}
 .radar .ring0{fill:rgba(255,255,255,.05)}.radar .ring1{fill:rgba(255,255,255,.09)}
 .radar .shape{fill:rgba(255,255,255,.2);stroke:var(--white);stroke-width:2;stroke-linejoin:miter}
 .radar .dot{fill:var(--white)}
-.radar text{font-family:Archivo,sans-serif;font-weight:800;font-size:11px;letter-spacing:.08em;fill:#c3c8f2;text-transform:uppercase}
+.radar text{font-family:Archivo,sans-serif;font-weight:800;font-size:12px;letter-spacing:.08em;fill:#d8dcff;text-transform:uppercase}
 .radar text.v{font-family:Graduate,serif;font-weight:400;font-size:15px;fill:var(--white);letter-spacing:0;text-transform:none}
 .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
 .pgrid>div{background:var(--zebra-blue);padding:5px 7px}
-.pgrid .lbl{font-size:10px;letter-spacing:.12em}
+.pgrid .lbl{font-size:12px;letter-spacing:.1em}
 .pgrid .v{font-size:24px;line-height:1.1}
-.prof-note{font-size:13px;font-weight:600;color:#c3c8f2;margin:12px 0 0;line-height:1.4}
+.prof-note{font-size:13px;font-weight:600;color:#d8dcff;margin:12px 0 0;line-height:1.4}
 /* Page Calendrier */
 .cal-sum{display:flex;align-items:baseline;gap:18px;padding:14px 18px;font-weight:700;font-size:15px;color:#d8dcff}
 .cal-sum span,.cal-jump{white-space:nowrap}
@@ -206,6 +208,8 @@ button.ics-btn:focus-visible{outline:3px solid var(--white);outline-offset:2px}
 .al-steps b{font-weight:900}
 .al-card{padding-top:20px;padding-bottom:20px}
 .al-card .h{font-size:30px;margin-bottom:8px}
+.al-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.al-x{appearance:none;border:0;border-radius:0;background:none;color:var(--blue);font:inherit;font-weight:800;font-size:13px;letter-spacing:.1em;text-transform:uppercase;text-decoration:underline;text-underline-offset:3px;min-height:44px;min-width:44px;margin:-10px -6px 0 0;padding:0 6px;cursor:pointer}
 .al-intro{margin:0;font-size:16px;font-weight:600;line-height:1.35}
 .al-card .al-steps{margin-top:10px;font-size:16px}
 .al-card .al-steps li{margin-bottom:4px}
@@ -220,7 +224,7 @@ button.ics-btn:focus-visible{outline:3px solid var(--white);outline-offset:2px}
 .cg:nth-child(even){background:var(--zebra-red)}
 .cg-date{text-align:center;line-height:1}
 .cg-d{display:block;font-size:30px}
-.cg-wd{display:block;font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-top:3px;opacity:.85}
+.cg-wd{display:block;font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-top:3px;opacity:.85}
 .cg-opp{min-width:0}
 .cg-vs{display:block;font-size:12.5px;font-weight:700;opacity:.85}
 .cg-name{display:block;font-size:26px;line-height:.95}
@@ -230,7 +234,7 @@ button.ics-btn:focus-visible{outline:3px solid var(--white);outline-offset:2px}
 .cg-code.D{background:var(--blue);color:var(--white)}
 .cg-code.DP{background:transparent;color:var(--white);box-shadow:inset 0 0 0 3px var(--white)}
 .cg-score{font-size:26px;margin-left:8px;vertical-align:middle}
-.cg-x{display:block;font-size:11.5px;font-weight:800;letter-spacing:.12em;margin-top:3px}
+.cg-x{display:block;font-size:12px;font-weight:800;letter-spacing:.1em;margin-top:3px}
 .cg-na{font-size:13px;font-weight:700;opacity:.85;white-space:normal}
 .cg-time{display:block;font-size:22px;line-height:1}
 .cg-time .hh{font-family:Archivo;font-stretch:62%;font-weight:900;font-size:.7em;margin:0 .08em}
@@ -240,7 +244,7 @@ button.ics-btn:focus-visible{outline:3px solid var(--white);outline-offset:2px}
 .cg-live{color:var(--white);font-weight:900;text-transform:uppercase;font-size:14px}
 .cg.next{background:var(--white);color:var(--red);padding-top:26px;padding-bottom:12px;scroll-margin-top:60px}
 .cg.next .cg-tv{color:var(--blue)}
-.cg-flag{position:absolute;left:18px;top:8px;font-size:11px;color:var(--blue)}
+.cg-flag{position:absolute;left:18px;top:8px;font-size:12px;color:var(--blue)}
 .cal-legend{padding-top:6px}
 /* Feuille de match */
 .goals,.pens{list-style:none;margin:0;padding:0}
@@ -252,11 +256,11 @@ button.ics-btn:focus-visible{outline:3px solid var(--white);outline-offset:2px}
 .gl-team{font-size:12px;font-weight:800;letter-spacing:.1em;background:var(--blue);padding:2px 5px;vertical-align:3px}
 .gl.mtl .gl-team{background:var(--white);color:var(--red)}
 .gl-n{font-size:14px;font-weight:700;opacity:.85}
-.gl-tag abbr{text-decoration:none;font-size:11.5px;font-weight:900;letter-spacing:.08em;background:rgba(255,255,255,.2);padding:2px 5px;vertical-align:3px}
+.gl-tag abbr{text-decoration:none;font-size:12px;font-weight:900;letter-spacing:.08em;background:rgba(255,255,255,.2);padding:2px 5px;vertical-align:3px}
 .gl-ast{display:block;font-size:13.5px;font-weight:600;color:#ffd9dc;margin-top:3px}
 .gl-sc{font-size:22px;line-height:1.2}
 .none{margin:8px 0 4px;font-size:15px;font-weight:600;opacity:.85}
-.star-line{font-size:13px;font-weight:700;color:#c3c8f2;margin-top:4px}
+.star-line{font-size:13px;font-weight:700;color:#d8dcff;margin-top:4px}
 .ldr .lbl{letter-spacing:.05em}
 table.shots th:not(:first-child),table.shots td:not(:first-child){width:auto}
 table.tstats td:first-child{font-family:Archivo;font-size:15px;font-weight:700}
@@ -315,7 +319,7 @@ tr.mtl td:last-child{box-shadow:18px 0 0 var(--red)}
 .sr-status small{display:block;font-size:14px;font-weight:700;color:#5b5f7e;margin-top:4px}
 .sr-status sup,.sr-line sup{font-size:.55em}
 .sr-line{background:var(--white);padding:8px 12px;margin-top:4px}
-.sr-lbl{font-size:11px;letter-spacing:.14em;color:#5b5f7e}
+.sr-lbl{font-size:12px;letter-spacing:.1em;color:#5b5f7e}
 .sr-main{font-size:17px;font-weight:600;margin-top:4px;line-height:1.3}
 .sr-main b{font-weight:900;color:var(--blue)}
 .sr-gp{font-size:13.5px;font-weight:600;color:#5b5f7e;margin-top:2px}
@@ -365,38 +369,49 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
 .hero-note{margin:14px 18px 0}
 /* Dernier but (carte en direct de l'accueil) */
 .last-goal{margin:14px 18px 0;font-weight:700;font-size:16px;line-height:1.3}
-.last-goal .lbl{display:block;font-size:11px;letter-spacing:.14em;color:#ffd9dc;margin-bottom:3px}
+.last-goal .lbl{display:block;font-size:12px;letter-spacing:.1em;color:#ffd9dc;margin-bottom:3px}
 /* Texte lu par les lecteurs d'écran seulement */
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .datebig.l .wd,.datebig.l .mo{font-size:min(38px,9.5vw)}
 .datebig.xl .day{font-size:min(150px,37.5vw)}
 .datebig.xl .wd,.datebig.xl .mo{font-size:min(36px,9vw)}
+/* Téléphone : date et adversaire plus compacts, pour que « Ce soir », l'heure, la télé et tout le compte à rebours
+   tiennent dans le premier écran (390 × 844). Ordi : tailles ci-dessus, inchangées. */
+@media (max-width:1023px){
+  .datebig .day{font-size:min(116px,29vw)}
+  .datebig.xl .day{font-size:min(104px,26vw)}
+  .datebig .wd,.datebig .mo{font-size:min(36px,9vw)}
+  .datebig.l .wd,.datebig.l .mo{font-size:min(32px,8vw)}
+  .datebig.xl .wd,.datebig.xl .mo{font-size:min(30px,7.5vw)}
+  .opp{margin-top:14px}
+  .opp .name,.opp .name.long{font-size:min(56px,15vw)}
+}
 /* Nouvelles */
 .news-list{list-style:none;margin:0;padding:0}
 .news-list li:nth-child(even) a{background:var(--zebra-blue)}
 .news-list a{display:block;padding-top:12px;padding-bottom:12px;color:var(--white);text-decoration:none}
 .news-list a:active{background:rgba(255,255,255,.08)}
 .news-title{display:block;font-weight:750;font-size:18px;line-height:1.25;font-stretch:100%;letter-spacing:0;word-spacing:.04em}
-.news-meta{display:block;margin-top:6px;font-size:13.5px;font-weight:600;color:#c3c8f2;font-stretch:100%;letter-spacing:0}
+.news-meta{display:block;margin-top:6px;font-size:13.5px;font-weight:600;color:#d8dcff;font-stretch:100%;letter-spacing:0}
 .news-meta b{color:var(--white);font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:12px;background:var(--red);padding:2px 6px;margin-right:2px}
 .news-fail{margin:14px 0 0;padding:8px 10px;font-size:14px;font-weight:700;color:var(--white);background:var(--red);font-stretch:100%;letter-spacing:0}
 .news-note{margin:14px 0 0;font-size:13px;color:#aeb3e0;font-stretch:100%;letter-spacing:0}
 .news-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
 .news-hd .h{margin:0}
-.stamp{margin:0;font-size:13px;font-weight:700;line-height:1.3;color:#c3c8f2;text-align:right}
+.stamp{margin:0;font-size:13px;font-weight:700;line-height:1.3;color:#d8dcff;text-align:right}
 .stamp b{color:var(--white);font-weight:800}
-.stamp-btn{display:block;margin:6px 0 0 auto;min-height:40px;padding:0 12px;border:0;border-radius:0;background:var(--white);color:var(--blue);font:inherit;font-weight:800;font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.stamp-btn{display:block;margin:6px 0 0 auto;min-height:44px;padding:0 12px;border:0;border-radius:0;background:var(--white);color:var(--blue);font:inherit;font-weight:800;font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
 .stamp-btn:focus-visible{outline:3px solid var(--white);outline-offset:2px}
 .news-hd + .news-fail{margin:0 0 14px}
 /* Compte à rebours de la carte du prochain match */
 .cd{margin:20px 0 0;background:var(--blue);border-top:10px solid var(--white);padding:14px 18px 16px}
 .hero:has(>.cd){padding-bottom:0} /* le compte à rebours ferme la carte : pas de bande rouge vide dessous */
-.cd .lbl{display:block;color:#c3c8f2}
+.cd .lbl{display:block;color:#d8dcff}
 .cd>.lbl{margin-bottom:8px}
 .cd-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .cd-u{background:var(--zebra-blue);padding:6px 4px 5px;text-align:center}
 .cd-v{display:block;font-size:44px;line-height:1}
-.cd-u .lbl{margin-top:4px;font-size:10.5px;letter-spacing:.14em}
+.cd-u .lbl{margin-top:4px;font-size:12px;letter-spacing:.1em}
 .cd-now{display:block;font-size:40px;line-height:1}
 /* Tirer pour actualiser (accueil) : indicateur fixe; le rebond natif d'iOS reste tel quel.
    contain : pas de rechargement natif de Chrome pour Android, rebond et effet de bord conservés. */
@@ -452,7 +467,7 @@ a:focus-visible{outline:3px solid var(--white);outline-offset:2px}
   .hero:has(>.faf)>*{grid-column:1}
   .hero:has(>.faf)>.top{grid-column:1/-1}
   .hero:has(>.faf)>.kick{justify-self:start}
-  .faf{grid-column:2!important;grid-row:2/span 5;align-self:center;margin:0 18px 0 0}
+  .faf{grid-column:2!important;grid-row:2/span 6;align-self:center;margin:0 18px 0 0}
   .hero:has(>.faf)>.cd{grid-column:1/-1}
   .faf-r{grid-template-columns:1fr 120px 120px;gap:10px;padding:7px 10px;font-size:16px}
   .faf-h .cond{font-size:22px}

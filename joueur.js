@@ -4,7 +4,7 @@
 (function () {
   "use strict";
   const { esc, loc, fin, num: n, pct, gaa, signed, age, WORDMARK, getJson } = T;
-  const errBox = (what, detail) => T.errBox(what, detail, false);
+  const { errBox } = T;
   const fGameDay = new Intl.DateTimeFormat("fr-CA", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" });
   const ID = new URLSearchParams(location.search).get("id") || "";
 

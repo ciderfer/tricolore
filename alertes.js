@@ -29,8 +29,8 @@
     show(`<section class="blk"><h2 class="h cond">Sur l’écran<br>d’accueil d’abord</h2>
       <p class="none">Sur iPhone, les alertes fonctionnent seulement depuis l’icône Tricolore de l’écran d’accueil (iOS 16.4 ou plus récent).</p>
       <ol class="al-steps">
-        <li>Dans Safari, touchez <b>Share</b> (le carré avec une flèche vers le haut).</li>
-        <li>Touchez <b>Add to Home Screen</b>, puis <b>Add</b>.</li>
+        <li>Dans Safari, touchez <b>Partager</b> (le carré avec une flèche vers le haut).</li>
+        <li>Touchez <b>Sur l’écran d’accueil</b>, puis <b>Ajouter</b>.</li>
         <li>Ouvrez Tricolore depuis l’écran d’accueil, puis touchez « Alertes de match » au bas de la page.</li>
       </ol></section>`);
   }
@@ -68,7 +68,7 @@
   async function disable(sub) {
     busy = true; msg = "Désactivation…"; render(sub);
     let warn = "";
-    try { await post("/push/unsubscribe", { endpoint: sub.endpoint }); } catch (e) { warn = ` (relais : ${e.message})`; }
+    try { await post("/push/unsubscribe", { endpoint: sub.endpoint }); } catch (e) { console.warn("Alertes :", e.message); warn = " (le relais Tricolore n’a pas confirmé)"; }
     try { await sub.unsubscribe(); } catch { /* déjà retiré */ }
     busy = false; msg = `Alertes désactivées sur cet appareil${warn}.`; render(null);
   }
@@ -90,13 +90,13 @@
     try {
       await navigator.serviceWorker.register("sw.js", { scope: "./" });
       reg = await navigator.serviceWorker.ready;
-    } catch (e) { return show(`<section class="blk">${errBox("Alertes", `service worker : ${e.message}`, false)}</section>`); }
-    try { key = await T.pushKey(); } catch (e) { return show(`<section class="blk">${errBox("Alertes", e.message, false)}</section>`); }
+    } catch (e) { return show(`<section class="blk">${errBox("Alertes", `service worker : ${e.message}`)}</section>`); }
+    try { key = await T.pushKey(); } catch (e) { return show(`<section class="blk">${errBox("Alertes", e.message)}</section>`); }
     const sub = await reg.pushManager.getSubscription();
     render(sub);
     // Abonnement déjà présent : on le redonne au Worker (aucune écriture s'il le connaît déjà; utile si l'adresse a changé).
     if (sub) post("/push/subscribe", { subscription: sub.toJSON(), prefs: loadPrefs() }).catch((e) => { msg = `Relais injoignable (${e.message}).`; render(sub); });
   }
 
-  start().catch((e) => { console.error(e); show(`<section class="blk">${errBox("Alertes", "erreur d’affichage", false)}</section>`); });
+  start().catch((e) => { console.error(e); show(`<section class="blk">${errBox("Alertes", "erreur d’affichage")}</section>`); });
 })();

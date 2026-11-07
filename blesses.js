@@ -58,8 +58,9 @@
     return new Set(inj.players.map((p) => match(roster, p)?.id).filter((id) => id != null));
   }
 
-  const errBox = (detail) =>
-    `<div class="err">Blessés : données indisponibles${detail ? ` (${esc(detail)})` : ""}. Aucune donnée affichée plutôt qu’une donnée inexacte.</div>`;
+  // Sans jargon : la cause technique reste dans data-detail. Liste trop vieille : on le dit tel quel.
+  const errBox = (detail, stale = false) =>
+    `<div class="err"${detail ? ` data-detail="${esc(detail)}"` : ""}>Blessés : ${stale ? "aucune mise à jour depuis plus de 3 jours" : "indisponibles pour le moment"}. Aucune donnée affichée plutôt qu’une donnée inexacte.</div>`;
 
   function row(p, roster) {
     const m = match(roster, p);
@@ -75,7 +76,7 @@
   function section(inj, roster, now, errDetail) {
     const h = `<h2 class="h cond">Blessés</h2>`;
     const st = state(inj, now);
-    if (st !== "ok") return `<section class="blk white inj-blk">${h}${errBox(st === "stale" ? "aucune mise à jour depuis plus de 3 jours" : errDetail || inj?.error || (inj ? "fichier illisible" : "fichier absent"))}</section>`;
+    if (st !== "ok") return `<section class="blk white inj-blk">${h}${errBox(errDetail || inj?.error || (st === "stale" ? "" : inj ? "fichier illisible" : "fichier absent"), st === "stale")}</section>`;
     const when = stamp(inj.fetchedAt);
     if (!inj.players.length)
       return `<section class="blk white inj-blk">${h}<p class="inj-none">Aucun blessé signalé.</p><p class="asof inj-src">Source : ESPN · mis à jour le ${esc(when)}.</p></section>`;
