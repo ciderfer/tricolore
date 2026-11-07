@@ -61,14 +61,6 @@ test("match terminé : envoi complet, puis fermeture (1000) et plus de lecture",
   assert.deepEqual(net.calls, []); // plus personne : aucune lecture
 });
 
-test("match d'autres équipes : fermeture 4404, rien d'envoyé", async () => {
-  const s = sock("landing");
-  net.landing = { ...net.landing, awayTeam: { abbrev: "BOS" }, homeTeam: { abbrev: "TOR" } };
-  const d = new Direct(ctx([s]), {});
-  assert.equal(await d.poll(), 0);
-  assert.equal(s.closed, 4404); assert.deepEqual(s.got, []);
-});
-
 test("LNH en panne : l'erreur est dite une fois, sans donnée; le retour de la LNH renvoie le pointage", async () => {
   const s = sock("landing");
   const d = new Direct(ctx([s]), {});
@@ -86,16 +78,36 @@ test("deux lectures en même temps (alarme + nouvelle connexion) : une seule lec
   assert.deepEqual(net.calls, ["landing"]);
 });
 
+// Faux binding DIRECT : note chaque objet créé (idFromName) et chaque appel à l'objet.
+function directEnv() {
+  const env = { made: [], reached: [] };
+  env.DIRECT = { idFromName: (n) => { env.made.push(n); return n; },
+    get: (id) => ({ fetch: async () => { env.reached.push(id); return new Response("ok"); } }) };
+  return env;
+}
+const callDirect = (env, path, headers = {}) => worker.fetch(new Request(`https://tricolore.tricolore.workers.dev${path}`,
+  { headers: { origin: "https://ciderfer.github.io", upgrade: "websocket", ...headers } }), env);
+
 test("route /direct : origine, chemin, WebSocket seulement", async () => {
-  let reached = null;
-  const env = { DIRECT: { idFromName: (n) => n, get: (id) => ({ fetch: async () => { reached = id; return new Response("ok"); } }) } };
-  const call = (path, headers = {}) => worker.fetch(new Request(`https://tricolore.tricolore.workers.dev${path}`, { headers: { origin: "https://ciderfer.github.io", ...headers } }), env);
-  assert.equal((await call(`/direct/${GAME_ID}`, { origin: "https://evil.example", upgrade: "websocket" })).status, 403);
-  assert.equal((await call("/direct/123", { upgrade: "websocket" })).status, 404);
-  assert.equal((await call(`/direct/${GAME_ID}`)).status, 426);
-  assert.equal(reached, null);
-  assert.equal((await call(`/direct/${GAME_ID}?parts=all`, { upgrade: "websocket" })).status, 200);
-  assert.equal(reached, String(GAME_ID));
+  const env = directEnv();
+  assert.equal((await callDirect(env, `/direct/${GAME_ID}`, { origin: "https://evil.example" })).status, 403);
+  assert.equal((await callDirect(env, "/direct/123")).status, 404);
+  assert.equal((await callDirect(env, `/direct/${GAME_ID}`, { upgrade: "" })).status, 426);
+  assert.deepEqual(env.made, []);
+  assert.equal((await callDirect(env, `/direct/${GAME_ID}?parts=all`)).status, 200);
+  assert.deepEqual(env.reached, [String(GAME_ID)]);
+});
+
+test("route /direct : match d'autres équipes ou inconnu de la LNH, refusé sans créer d'objet", async () => {
+  const env = directEnv();
+  net.landing = { ...net.landing, awayTeam: { abbrev: "BOS" }, homeTeam: { abbrev: "TOR" } };
+  const other = await callDirect(env, "/direct/2026020999");
+  assert.equal(other.status, 404);
+  assert.deepEqual(await other.json(), { error: "match du Canadien seulement" });
+  net.fail = true; // numéro au hasard : la LNH répond une erreur
+  assert.equal((await callDirect(env, "/direct/1234567890")).status, 502);
+  assert.deepEqual(env.made, []);
+  assert.deepEqual(env.reached, []);
 });
 
 test("rien de neuf pendant 25 s : un signe de vie (ping) à tous", async () => {
