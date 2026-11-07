@@ -27,12 +27,18 @@ export function changes(before, after) {
 // Données sans lesquelles l'accueil n'affiche rien : la liste des problèmes (vide = on peut publier).
 export function essentials(site) {
   const problems = [];
+  // Un objet JSON (pas null, false, 0, une liste…), sinon le problème est noté et on rend null.
   const read = (name) => {
-    try { return JSON.parse(readFileSync(join(site, "data", name), "utf8")); }
+    let v;
+    try { v = JSON.parse(readFileSync(join(site, "data", name), "utf8")); }
     catch (e) { problems.push(`data/${name} ${e.code === "ENOENT" ? "absent" : "illisible"}`); return null; }
+    if (v !== null && typeof v === "object" && !Array.isArray(v)) return v;
+    problems.push(`data/${name} n'est pas un objet JSON`);
+    return null;
   };
   const meta = read("meta.json"), schedule = read("schedule.json");
-  if (meta && !Date.parse(meta.checkedAt || "")) problems.push("data/meta.json sans checkedAt");
+  if (meta && !(typeof meta.checkedAt === "string" && Number.isFinite(Date.parse(meta.checkedAt))))
+    problems.push("data/meta.json sans checkedAt valide");
   if (schedule && !Array.isArray(schedule.games)) problems.push("data/schedule.json sans liste de matchs");
   return problems;
 }

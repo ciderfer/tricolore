@@ -75,8 +75,12 @@ test("données essentielles absentes ou illisibles : erreur, rien de publié, m�
     [{ "data/schedule.json": null }, "data/schedule.json absent"],
     [{ "data/meta.json": null }, "data/meta.json absent"],
     [{ "data/meta.json": "{pas du json" }, "data/meta.json illisible"],
-    [{ "data/meta.json": "{}" }, "data/meta.json sans checkedAt"],
+    [{ "data/meta.json": "{}" }, "data/meta.json sans checkedAt valide"],
+    [{ "data/meta.json": '{"checkedAt":"hier"}' }, "data/meta.json sans checkedAt valide"],
+    [{ "data/meta.json": '{"checkedAt":0}' }, "data/meta.json sans checkedAt valide"],
+    [{ "data/meta.json": '{"checkedAt":null}' }, "data/meta.json sans checkedAt valide"],
     [{ "data/schedule.json": "{}" }, "data/schedule.json sans liste de matchs"],
+    [{ "data/schedule.json": '{"games":null}' }, "data/schedule.json sans liste de matchs"],
   ];
   for (const [over, problem] of cases) {
     assert.deepEqual(essentials(site(over)), [problem]);
@@ -85,6 +89,23 @@ test("données essentielles absentes ou illisibles : erreur, rien de publié, m�
     assert.equal(r.error, `Données essentielles manquantes : ${problem}. Rien n'est publié.`);
   }
   assert.deepEqual(essentials(temp()), ["data/meta.json absent", "data/schedule.json absent"]);
+});
+
+test("JSON valide mais inutilisable (null, false, 0, liste, texte) : refusé dans les deux fichiers, même sur un push", () => {
+  for (const v of ["null", "false", "0", "[]", '"texte"']) {
+    const s = site({ "data/meta.json": v, "data/schedule.json": v });
+    assert.deepEqual(essentials(s), ["data/meta.json n'est pas un objet JSON", "data/schedule.json n'est pas un objet JSON"], v);
+    assert.equal(decide("/chemin/inexistant", s, "push").publish, false, v);
+  }
+});
+
+test("vrais contenus acceptés tels quels : checkedAt à l'époque 0, calendrier hors saison sans match, champs en plus", () => {
+  const s = site({
+    "data/meta.json": JSON.stringify({ updatedAt: "1970-01-01T00:00:00.000Z", checkedAt: "1970-01-01T00:00:00.000Z", sources: { schedule: { ok: false, error: "HTTP 503", since: "1970-01-01T00:00:00.000Z" } }, news: {}, joueurs: null }),
+    "data/schedule.json": JSON.stringify({ previousSeason: 20252026, currentSeason: 20262027, clubTimezone: "America/Toronto", games: [] }),
+  });
+  assert.deepEqual(essentials(s), []);
+  assert.equal(decide("/chemin/inexistant", s, "schedule").publish, true);
 });
 
 test("en ligne de commande : publier=true|false dans GITHUB_OUTPUT, code 1 si une donnée essentielle manque", () => {
