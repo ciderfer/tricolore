@@ -39,6 +39,7 @@
     const opp = team(home ? g.awayTeam : g.homeTeam, byAbbr);
     const dt = new Date(g.startTimeUTC);
     const tbd = g.gameScheduleState && g.gameScheduleState !== "OK";
+    const when = T.dayLabel(dt);
     return `<section class="hero">${top()}
       <div class="lbl kick">Prochain match · ${home ? "Domicile" : "Étranger"}${g.gameType === 1 ? " · Préparatoire" : ""}</div>
       ${(() => {
@@ -49,9 +50,9 @@
         <div class="side"><div class="wd cond">${esc(wd)}</div><div class="mo cond">${esc(mo)}</div></div></div>`;
       })()}
       <div class="opp"><div><span class="vs">${home ? "Contre les" : "Chez les"}</span><span class="name cond${Math.max(...opp.name.split(/\s+/).map((w) => w.length)) >= 9 ? " long" : ""}">${esc(opp.name)}</span><span class="place">de ${esc(opp.place)}</span></div></div>
-      <div class="time"><span class="num">${tbd ? "À CONFIRMER" : `${hourOf(dt)}<span class="hh">h</span>${minOf(dt)}`}</span><small>Heure<br>de l’Est</small></div>
-      <div class="meta"><span class="chip w">${esc(loc(g.venue))}</span>${chips(tvOf(g))}</div>
-      ${faceAFace(d, g, home, opp, byAbbr)}${tbd ? "" : `<div class="cd" role="timer" aria-label="Temps avant la mise au jeu" data-start="${esc(g.startTimeUTC)}">${countdown(dt)}</div>`}</section>`;
+      ${when ? `<p class="when cond">${esc(when)}</p>` : ""}<div class="time"><span class="num">${tbd ? "À CONFIRMER" : `${hourOf(dt)}<span class="hh">h</span>${minOf(dt)}`}</span><small>Heure<br>de l’Est</small></div>
+      <div class="meta">${chips(tvOf(g))}<span class="chip w">${esc(loc(g.venue))}</span></div>
+      ${tbd ? "" : `<div class="cd" role="timer" aria-label="Temps avant la mise au jeu" data-start="${esc(g.startTimeUTC)}">${countdown(dt)}</div>`}${faceAFace(d, g, home, opp, byAbbr)}</section>`;
   }
 
   // Compte à rebours jusqu'à l'heure prévue de la mise au jeu (calendrier LNH). La carte passe au pointage
@@ -122,8 +123,8 @@
     const how = source === "worker" && final
       ? `Pointage final reçu à ${esc(when || "heure inconnue")} (heure de l’Est).`
       : source === "worker"
-      ? `Pointage en direct${when ? ` en date de ${esc(when)}` : ""} (heure de l’Est), mis à jour automatiquement.`
-      : `Pointage en date de ${esc(when || "heure inconnue")} (heure de l’Est), fichiers du site rafraîchis environ aux 15 minutes.`;
+      ? `Pointage de ${esc(when || "heure inconnue")} (heure de l’Est), mis à jour en direct.`
+      : `Pointage de ${esc(when || "heure inconnue")} (heure de l’Est), mis à jour aux 15 minutes environ.`;
     const extra = p?.periodType === "OT" ? " · Prolongation" : p?.periodType === "SO" ? " · Tirs de barrage" : "";
     // Dernier but : seulement avec le sommaire lu au Worker (les fichiers du site n'en ont pas).
     const lg = source === "worker" ? T.lastGoal(g) : null;
@@ -133,7 +134,7 @@
       <div class="lbl kick ${final ? "" : "live-kick"}">${final ? `Match terminé${extra}` : `En direct · ${period}`}</div>
       <div class="board">${row(g.awayTeam, "Visiteurs")}${row(g.homeTeam, "Locaux")}</div>
       <div class="state">${final ? "Final" : clock}<small>${how}</small>${note ? `<small class="warn-note">${esc(note)}</small>` : ""}</div>${goal}
-      <div class="meta"><span class="chip w">${esc(loc(g.venue))}</span>${chips(tvOf(g))}</div>${/^\d{10}$/.test(String(g.id)) ? `<a class="more hero-more" href="match.html?id=${encodeURIComponent(g.id)}">Feuille de match ›</a>` : ""}</section>`;
+      <div class="meta">${chips(tvOf(g))}<span class="chip w">${esc(loc(g.venue))}</span></div>${/^\d{10}$/.test(String(g.id)) ? `<a class="more hero-more" href="match.html?id=${encodeURIComponent(g.id)}">Feuille de match ›</a>` : ""}</section>`;
   }
 
   // Rang au classement (sous-entendu : place) : 1re, 2e, 3e…
@@ -194,7 +195,7 @@
       ? `<p class="news-fail">Source indisponible : ${failed.map((s) => esc(s.name)).join(", ")}.</p>` : "";
     const items = (d.news?.items || []).filter((i) => /^https:\/\//.test(i.url));
     if (!items.length) {
-      const why = d.errors.news ? `fichier des nouvelles introuvable (${esc(d.errors.news)})`
+      const why = d.errors.news ? "nouvelles indisponibles pour le moment"
         : status.length && !status.some((s) => s.ok) ? "aucune source de nouvelles n’a répondu" : "aucune manchette récente sur le Canadien";
       return `<section class="blk news">${h}<div class="err">Nouvelles : ${why}. Aucune manchette affichée plutôt qu’une manchette inventée.</div>${failNote}</section>`;
     }
@@ -213,8 +214,9 @@
   async function alertSetup() {
     try {
       const dev = T.pushDevice();
-      const reg = dev.push ? await navigator.serviceWorker.getRegistration() : null; // getRegistration : jamais d'attente sans fin
-      al.state = T.alertCard(dev, !!(await reg?.pushManager.getSubscription()));
+      const hidden = T.cardHidden();
+      const reg = dev.push && !hidden ? await navigator.serviceWorker.getRegistration() : null; // getRegistration : jamais d'attente sans fin
+      al.state = T.alertCard(dev, !!(await reg?.pushManager.getSubscription()), hidden);
     } catch (e) { console.warn("Alertes de match :", e.message); }
     if (al.state !== "activer") return;
     // Prêts avant le toucher : Safari exige que subscribe() parte dans le geste, sans attente réseau avant.
@@ -223,11 +225,12 @@
   }
   const alertBody = () => al.state === "installer"
     ? `<p class="al-intro">Ajoute Tricolore à ton écran d’accueil pour recevoir les alertes de buts.</p>
-      <ol class="al-steps"><li>Touche <b>Share</b> en bas de Safari</li><li>Choisis <b>Add to Home Screen</b></li><li>Ouvre Tricolore depuis l’icône</li></ol>`
+      <ol class="al-steps"><li>Touche <b>Partager</b> (le carré avec une flèche) dans Safari</li><li>Choisis <b>Sur l’écran d’accueil</b>, puis <b>Ajouter</b></li><li>Ouvre Tricolore depuis l’icône</li></ol>`
     : al.state === "activer"
     ? `<p class="al-intro">Buts, début et fin de match, direct sur ton téléphone.</p><button type="button" class="ics-btn al-go">Active les alertes de match</button>`
     : `<a class="more al-more" href="alertes.html">Choisir les alertes ›</a>`;
-  const alertBlock = () => al.state ? `<section class="blk white al-card" id="al-card" aria-labelledby="al-h"><h2 class="h cond" id="al-h">Alertes de match</h2>
+  const alertBlock = () => al.state ? `<section class="blk white al-card" id="al-card" aria-labelledby="al-h"><div class="al-hd"><h2 class="h cond" id="al-h">Alertes de match</h2>
+    <button type="button" class="al-x" aria-label="Masquer la carte Alertes de match. Le lien Alertes de match reste au bas de la page.">Masquer</button></div>
     <div class="al-body">${alertBody()}</div><p class="al-msg" role="status">${esc(al.msg)}</p></section>` : "";
   function paintAlert() {
     const card = document.getElementById("al-card");
@@ -235,14 +238,22 @@
     if (al.state === "fait") { card.querySelector(".al-body").innerHTML = alertBody(); card.querySelector(".al-more").focus(); }
     card.querySelector(".al-msg").textContent = al.msg; // zone role=status gardée telle quelle : le message est lu
   }
+  // Masquée pour de bon sur cet appareil; le focus passe à la section suivante.
+  function hideAlertCard() {
+    T.hideCard();
+    al.state = "";
+    const card = document.getElementById("al-card"), next = card?.nextElementSibling;
+    card?.remove();
+    if (next) { next.tabIndex = -1; next.focus({ preventScroll: true }); }
+  }
   function activate() {
     if (al.busy) return;
-    if (!al.reg || !al.key) { al.msg = "Alertes pas encore prêtes (relais Tricolore ou service worker). Réessaie dans un moment."; paintAlert(); return; }
+    if (!al.reg || !al.key) { al.msg = "Alertes pas encore prêtes. Réessaie dans un moment."; paintAlert(); return; }
     const p = T.pushPrefs();
     const pending = T.pushSubscribe(al.reg, al.key, Object.values(p).some(Boolean) ? p : { debut: true, buts: true, final: true });
     al.busy = true; al.msg = "Activation…"; paintAlert();
     pending.then(() => { al.state = "fait"; al.msg = "C’est parti : tu seras averti pendant les matchs du CH."; },
-      (e) => { al.msg = Notification.permission === "denied" ? "Notifications refusées pour Tricolore (réglages de l’appareil)." : `Activation impossible (${e.message || "erreur"}).`; })
+      (e) => { console.warn("Alertes de match :", e.message); al.msg = Notification.permission === "denied" ? "Notifications refusées pour Tricolore (réglages de l’appareil)." : "Activation impossible pour le moment. Réessaie plus tard."; })
       .finally(() => { al.busy = false; paintAlert(); });
   }
 
@@ -356,16 +367,16 @@
     const d = await Promise.race([T.load(SOURCES), new Promise((r) => setTimeout(r, 15_000, null))]);
     await wait;
     const now = new Date();
-    const fail = !d ? "délai dépassé" : d.errors.meta && SOURCES.every((n) => !d[n]) ? "réseau ou site injoignable" : "";
+    const fail = !d ? "le site met trop de temps à répondre" : d.errors.meta && SOURCES.every((n) => !d[n]) ? "pas de connexion ou site injoignable" : "";
     if (fail) {
-      refreshErr = `Échec de l’actualisation à ${hm(now)} (${fail}). Données affichées : celles lues à ${hm(refreshedAt)}.`;
+      refreshErr = `Actualisation impossible à ${hm(now)} (${fail}). Données affichées : celles de ${hm(refreshedAt)}.`;
       render(D);
     } else {
       refreshErr = "";
       refreshedAt = now;
       render(d);
     }
-    show(fail ? `Échec de l’actualisation : ${fail}` : `Mis à jour à ${hm(now)}`, fail ? "fail" : "done");
+    show(fail ? `Actualisation impossible : ${fail}` : `Mis à jour à ${hm(now)}`, fail ? "fail" : "done");
     hideTimer = setTimeout(() => show("", ""), fail ? 4000 : 2000);
     busy = false;
   }
@@ -377,6 +388,7 @@
     document.getElementById("app").addEventListener("click", (e) => {
       if (e.target.closest(".stamp-btn")) refresh();
       else if (e.target.closest(".al-go")) activate();
+      else if (e.target.closest(".al-x")) hideAlertCard();
     });
     const PULL = 80; // px de glissement du doigt
     let y0 = null, x0 = 0, ready = false;
@@ -451,9 +463,9 @@
       failures += 1;
       console.warn("Pointage en direct indisponible :", why);
       const metaTime = D.meta?.updatedAt ? fStamp.format(new Date(D.meta.updatedAt)) : "heure inconnue";
-      const note = `Pointage en direct indisponible. Affichage des données du site en date du ${metaTime} (heure de l’Est).`;
+      const note = `Le direct ne répond pas pour le moment. Données du ${metaTime} (heure de l’Est), mises à jour aux 15 minutes environ.`;
       if (lastGood && LIVE.has(lastGood.live.gameState)) {
-        const staleNote = `Pointage en direct indisponible. Dernier pointage reçu à ${fClock.format(lastGood.asOf)} (heure de l’Est).`;
+        const staleNote = `Le direct ne répond pas pour le moment. Dernier pointage reçu à ${fClock.format(lastGood.asOf)} (heure de l’Est).`;
         slot().innerHTML = liveHero(lastGood.live, lastGood.asOf, "worker", staleNote);
       } else {
         direct = false;

@@ -59,7 +59,7 @@ test("coupure à 3 jours : ok jusqu'à 72 h, puis message", () => {
   assert.equal(TB.state(null, NOW), "error");
   assert.equal(TB.state({ players: [] }, NOW), "error"); // sans fetchedAt
   const html = TB.section(file([P({ firstName: "Nick", lastName: "Suzuki" })], ago(80)), roster, NOW);
-  assert.match(html, /données indisponibles \(aucune mise à jour depuis plus de 3 jours\)/);
+  assert.match(html, /class="err">Blessés : aucune mise à jour depuis plus de 3 jours\. Aucune donnée affichée/);
   assert.doesNotMatch(html, /Suzuki/);
   assert.equal(TB.injuredIds(file([P({ firstName: "Nick", lastName: "Suzuki" })], ago(80)), roster, NOW).size, 0);
 });
@@ -69,13 +69,14 @@ test("états vide et erreur", () => {
   assert.match(empty, /Aucun blessé signalé\./);
   assert.match(empty, /Source : ESPN · mis à jour le 23 oct\., 18 h 05\./);
   const err = TB.section(null, roster, NOW, "HTTP 404");
-  assert.match(err, /class="err">Blessés : données indisponibles \(HTTP 404\)\. Aucune donnée affichée/);
-  assert.match(TB.section(undefined, roster, NOW), /données indisponibles \(fichier absent\)/);
+  // Sans jargon pour le partisan : la cause technique reste dans data-detail.
+  assert.match(err, /class="err" data-detail="HTTP 404">Blessés : indisponibles pour le moment\. Aucune donnée affichée/);
+  assert.match(TB.section(undefined, roster, NOW), /data-detail="fichier absent">Blessés : indisponibles pour le moment\./);
   // Échec ESPN noté dans le fichier (players null) : jamais « Aucun blessé signalé ».
   const down = TB.section({ ...file(null), error: "CH absent de la réponse ESPN" }, roster, NOW);
-  assert.match(down, /données indisponibles \(CH absent de la réponse ESPN\)/);
+  assert.match(down, /data-detail="CH absent de la réponse ESPN">Blessés : indisponibles pour le moment\./);
   assert.doesNotMatch(down, /Aucun blessé/);
-  assert.match(TB.section({ fetchedAt: ago(1), players: "?" }, roster, NOW), /données indisponibles \(fichier illisible\)/);
+  assert.match(TB.section({ fetchedAt: ago(1), players: "?" }, roster, NOW), /data-detail="fichier illisible">Blessés : indisponibles pour le moment\./);
   assert.equal(TB.injuredIds(file(null), roster, NOW).size, 0);
 });
 

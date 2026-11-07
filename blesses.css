@@ -10,14 +10,14 @@
 .inj-list .pl:nth-child(even){background:var(--zebra-cream)}
 .inj-no{display:flex;flex-direction:column;align-items:flex-end;line-height:1;color:var(--blue);padding-top:1px}
 .inj-no .num{font-size:24px}
-.inj-no abbr{text-decoration:none;font-size:10px;letter-spacing:.12em;color:#5b5f7e;margin-top:2px}
+.inj-no abbr{text-decoration:none;font-size:12px;letter-spacing:.1em;color:#5b5f7e;margin-top:2px}
 .inj .pl-id{min-width:0}
 .inj .pl-name{font-size:22px;color:var(--ink)}
 .inj .pl-info{color:#5b5f7e;font-size:13.5px;margin-top:1px}
 .inj-src{font-size:12.5px;margin-top:8px}
 .inj-none{margin:6px 0 0;font-weight:700;color:var(--blue)}
 .inj-blk .err{color:var(--red);background:var(--pale);margin-top:6px}
-.pl-inj{display:inline-block;margin-left:6px;background:var(--white);color:var(--red);font-weight:800;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:2px 5px 1px;vertical-align:1px}
+.pl-inj{display:inline-block;margin-left:6px;background:var(--white);color:var(--red);font-weight:800;font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:2px 5px 1px;vertical-align:1px}
 @media (min-width:1024px){
   main:has(>.blk>.roster:not(.l5))>.inj-blk{grid-column:1/-1}
   /* styles.css prévoit 5 rangées « auto » avant les gardiens : une de plus pour cette section */
