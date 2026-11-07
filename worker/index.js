@@ -13,7 +13,8 @@
 // GET /push/vapid-public-key, mêmes règles (origine permise, limiteur). Minuterie chaque minute : regarde l'état
 // du match du Canadien (une lecture LNH, plus la feuille du match quand il est en cours) et envoie les alertes.
 // Secrets des alertes : VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (mailto:). Liaison KV : ALERTES.
-// Direct (WebSocket, voir direct.js) : GET /direct/<match>[?parts=all], mêmes règles; une connexion par partisan
+// Direct (WebSocket, voir direct.js) : GET /direct/<match>[?parts=all], mêmes règles (match du Canadien vérifié avant
+// de créer l'objet); une connexion par partisan
 // au lieu d'une requête aux 15 s. Liaison Durable Object : DIRECT.
 import { runAlertes, subscribe, unsubscribe } from "./alertes.js";
 export { Direct } from "./direct.js";
@@ -130,27 +131,34 @@ export default {
       if (!success) return reply(429, { error: "trop de requêtes, réessayez dans une minute" }, okOrigin, { "retry-after": "60", "cache-control": "no-store" });
     }
     if (isPush) return push(request, env, pathname, okOrigin);
+    const now = Date.now(), base = env.NHL_API || UPSTREAM; // NHL_API : fausse LNH en local (comme alertes.js)
+    const fail = (error) => reply(502, { error }, okOrigin, { "cache-control": "no-store" });
+    // Le match doit opposer le Canadien : on vérifie avec « landing » (mise en cache aussi).
+    const checkMtl = async (id) => {
+      const landing = await getUpstream(base, `/v1/gamecenter/${id}/landing`, "game", now);
+      if (landing.error) return { res: fail(landing.error) };
+      if (!landing.mtl) return { res: reply(404, { error: "match du Canadien seulement" }, okOrigin) };
+      return { ttl: landing.ttl };
+    };
+
     if (pathname.startsWith("/direct/")) {
       if (!/^\/direct\/\d{10}$/.test(pathname)) return reply(404, { error: "chemin non permis" }, okOrigin);
       if (request.headers.get("upgrade")?.toLowerCase() !== "websocket") return reply(426, { error: "WebSocket seulement" }, okOrigin);
       if (!env.DIRECT) return reply(503, { error: "direct pas encore configuré" }, okOrigin);
+      // Vérifié avant de créer l'objet : un numéro au hasard ne crée ni objet ni stockage.
+      const { res } = await checkMtl(pathname.slice(8));
+      if (res) return res;
       return env.DIRECT.get(env.DIRECT.idFromName(pathname.slice(8))).fetch(request);
     }
 
     const route = ROUTES.find(([re]) => re.test(pathname));
     if (!route) return reply(404, { error: "chemin non permis" }, okOrigin);
-    const now = Date.now(), base = env.NHL_API || UPSTREAM; // NHL_API : fausse LNH en local (comme alertes.js)
-    const fail = (error) => reply(502, { error }, okOrigin, { "cache-control": "no-store" });
-    const notMtl = () => reply(404, { error: "match du Canadien seulement" }, okOrigin);
 
     let landingTtl = 5;
     if (route[1] === "game") {
-      // Le match doit opposer le Canadien : on vérifie avec « landing » (mise en cache aussi).
-      const id = pathname.split("/")[3];
-      const landing = await getUpstream(base, `/v1/gamecenter/${id}/landing`, "game", now);
-      if (landing.error) return fail(landing.error);
-      if (!landing.mtl) return notMtl();
-      landingTtl = landing.ttl;
+      const { res, ttl } = await checkMtl(pathname.split("/")[3]);
+      if (res) return res;
+      landingTtl = ttl;
     }
     const res = await getUpstream(base, pathname, route[1], now, landingTtl);
     if (res.error) return fail(res.error);

@@ -1,7 +1,7 @@
 // Tests de la logique de surveillance (scripts/etat.mjs). Lancer : node --test tests/*.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { failingSince, diagnose, planIssue, issueBody, ISSUE_TITLE, BOT, STALE_MIN, FAIL_MIN } from "../scripts/etat.mjs";
+import { failingSince, diagnose, planIssue, issueBody, ISSUE_TITLE, BOT, STALE_MIN, FAIL_MIN, GH_TOKEN_EXPIRES, TOKEN_WARN_DAYS } from "../scripts/etat.mjs";
 
 const NOW = Date.parse("2026-10-20T18:00:00Z");
 const ago = (min) => new Date(NOW - min * 60_000).toISOString();
@@ -47,6 +47,21 @@ test("diagnose : une source en échec sans since (ancien meta.json) n'est pas si
 
 test("diagnose : meta.json illisible", () => {
   assert.deepEqual(diagnose(null, NOW, "HTTP 404"), ["meta.json du site illisible (HTTP 404)."]);
+});
+
+test("diagnose : alerte GH_TOKEN 14 jours avant l'expiration, même si meta.json est illisible", () => {
+  const end = Date.parse(GH_TOKEN_EXPIRES);
+  const at = (t) => diagnose({ checkedAt: new Date(t).toISOString() }, t); // données fraîches à l'heure t
+  const day = 86_400_000;
+  assert.deepEqual(at(end - (TOKEN_WARN_DAYS + 1) * day), []); // 15 jours avant : rien
+  const soon = at(end - TOKEN_WARN_DAYS * day);
+  assert.equal(soon.length, 1);
+  assert.match(soon[0], /^Le GH_TOKEN du Worker expire le 17 janvier 2027 à 00 h 00, heure de l’Est, dans 14 jours\. Renouveler/);
+  assert.match(at(end - day / 2)[0], /dans 1 jour\./);
+  assert.match(at(end + day)[0], /^Le GH_TOKEN du Worker a expiré le 17 janvier 2027/);
+  const both = diagnose(null, end - day, "HTTP 404");
+  assert.equal(both.length, 2);
+  assert.match(both[1], /^meta\.json du site illisible/);
 });
 
 const issue = (n, extra = {}) => ({ number: n, title: ISSUE_TITLE, user: { login: BOT }, ...extra });
