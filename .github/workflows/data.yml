@@ -1,68 +1,113 @@
 name: Données LNH
 
+# Récupère les données et publie le site sur GitHub Pages. Les données ne sont pas dans Git : le cache GitHub Actions
+# garde le dernier site publié (_publie/), données comprises, d'un passage à l'autre. Voir scripts/publication.mjs.
 on:
-  # Déclencheur principal : la minuterie du Worker Cloudflare (worker/) aux 15 minutes.
-  # L'horaire de GitHub reste en filet de sécurité, hors des minutes chargées (:00, :15, :30, :45).
+  # Déclencheur principal : la minuterie du Worker Cloudflare (worker/) aux 15 minutes. Ce fichier garde le nom data.yml
+  # parce que le Worker l'appelle par ce nom.
+  workflow_dispatch:
+  # Filet de sécurité, hors des minutes chargées (:00, :15, :30, :45).
   schedule:
     - cron: "8,38 * * * *"
-  workflow_dispatch:
+  # Nouveau code sur main : publié tout de suite, avec les dernières données.
+  push:
+    branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
+# Un passage à la fois : deux passages qui liraient le même cache publieraient chacun de leur côté.
 concurrency:
   group: donnees-lnh
   cancel-in-progress: false
 
 jobs:
-  fetch:
+  donnees:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      changed: ${{ steps.commit.outputs.changed }}
+      publier: ${{ steps.decision.outputs.publier }}
     steps:
+      # Toujours la pointe de main : un passage de données publie aussi le dernier code.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
+          persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
 
+      # Le dernier site publié. Cache absent (premier passage, effacé, 7 jours sans usage) : tout est relu de la LNH.
+      - name: Site publié au dernier passage (cache)
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: _publie
+          key: site-publie-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: site-publie-
+
+      # Les scripts comparent avec ces fichiers (début d'une panne, fiches de joueurs, rafraîchissement aux 45 min).
+      - name: Reprendre les données publiées
+        run: |
+          if [ -d _publie/data ]; then rm -rf data && cp -r _publie/data data; else echo "Aucun cache : données relues au complet."; fi
+
       - name: Récupérer les données
         run: node scripts/fetch-data.mjs
 
       # Blessés (API non officielle d'ESPN) : un échec ne doit jamais bloquer les données LNH.
-      # En cas d'échec, le script écrit « données indisponibles » (players null); le commit ci-dessous (git add data) l'inclut.
+      # En cas d'échec, le script écrit « données indisponibles » (players null).
       - name: Récupérer les blessés (ESPN)
         continue-on-error: true
         timeout-minutes: 1
         run: node scripts/fetch-injuries.mjs
 
-      - name: Committer data/ si modifié
-        id: commit
+      - name: Préparer le site
         run: |
-          if [ -z "$(git status --porcelain -- data)" ]; then
-            echo "Aucun changement."
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
-          git add data
-          git commit -m "données: mise à jour LNH"
-          # Si main a bougé pendant la tâche (commit manuel), on se replace par-dessus au lieu d'échouer.
-          git pull --rebase origin main
-          git push origin HEAD:main
-          echo "changed=true" >> "$GITHUB_OUTPUT"
+          mkdir _site
+          cp -r *.html *.js *.css fonts data manifest.webmanifest icons robots.txt sitemap.xml _site/
+          # Version des JS et CSS tirée de leur contenu. GitHub Pages met max-age=600 : sans version,
+          # un iPhone pourrait garder l'ancien JS avec le nouveau HTML.
+          V=$(cat *.js *.css | sha256sum | cut -c1-8)
+          sed -i -E "s/(src|href)=\"([a-z]+\.(js|css))\"/\1=\"\2?v=$V\"/g" _site/*.html
+          # Vérification : échoue (et ne publie pas) si aucune version n'a été ajoutée.
+          grep -oE '"[a-z]+\.(js|css)\?v=[0-9a-f]{8}"' _site/index.html
 
-  # Un push fait avec GITHUB_TOKEN ne déclenche pas d'autre workflow :
-  # on redéploie donc explicitement le site quand les données changent.
-  deploy:
-    needs: fetch
-    if: needs.fetch.outputs.changed == 'true'
+      # Échoue si meta.json ou schedule.json manque : le site en ligne reste alors tel quel.
+      - name: Publier?
+        id: decision
+        run: node scripts/publication.mjs _publie _site "${{ github.event_name }}"
+
+      - if: steps.decision.outputs.publier == 'true'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: _site
+
+  publier:
+    needs: donnees
+    if: needs.donnees.outputs.publier == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       pages: write
       id-token: write
-    uses: ./.github/workflows/pages.yml
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+      # Le cache ne prend le nouveau site qu'une fois publié : si la publication échoue, le passage suivant
+      # voit encore la différence et réessaie.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: github-pages
+          path: ${{ runner.temp }}/pages
+      - name: Site publié
+        run: mkdir _publie && tar -xf "$RUNNER_TEMP/pages/artifact.tar" -C _publie
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: _publie
+          key: site-publie-${{ github.run_id }}-${{ github.run_attempt }}

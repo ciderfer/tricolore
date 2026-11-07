@@ -1,7 +1,6 @@
 name: Tests
 
 # Tests du site et du Worker à chaque push et pull request. Ne déploie rien.
-# Les commits de données (data.yml) sont poussés avec GITHUB_TOKEN : ils ne déclenchent pas ce workflow.
 on:
   push:
   pull_request:

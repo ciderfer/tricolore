@@ -5,3 +5,8 @@ node_modules/
 .dev.vars
 .dev.vars.*
 worker/.dev.vars*
+# Données (scripts/fetch-data.mjs) : publiées par data.yml, jamais dans Git. En local : node scripts/fetch-data.mjs
+/data/
+# Dossiers de travail de data.yml (site construit, site publié tiré du cache)
+/_site/
+/_publie/

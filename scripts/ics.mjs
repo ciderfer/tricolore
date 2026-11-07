@@ -3,7 +3,7 @@
 // - Heures en UTC (suffixe Z) : les applis les affichent à l'heure locale (heure de l'Est à Montréal).
 // - UID stable par match (identifiant LNH) : une mise à jour remplace l'événement, sans doublon.
 // - DTSTAMP : heure de la génération. On compare le contenu sans les DTSTAMP pour ne réécrire
-//   le fichier (et donc ne committer) que si un match a réellement changé.
+//   le fichier (et donc ne publier) que si un match a réellement changé.
 const SITE = "https://ciderfer.github.io/tricolore";
 const DURATION = "PT2H45M";
 const DONE = new Set(["OFF", "FINAL"]);
