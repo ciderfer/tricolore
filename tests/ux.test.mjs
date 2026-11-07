@@ -239,3 +239,38 @@ test("téléphone : date et adversaire compacts à 320, 375 et 390 px, date lisi
   assert.match(CSS, /\.datebig \.day\{font-size:min\(172px,43vw\)/);
   assert.match(CSS, /\.opp \.name\{font-size:84px/);
 });
+
+// ---- Places de repêchage (course aux séries) à 320 px ----
+test("repêchage, 320 px : colonnes de chiffres à la largeur du contenu, en-têtes sans espacement, 360 px et plus inchangés", () => {
+  const start = CSS.indexOf("@media (max-width:359px){\n  table.wc");
+  assert.ok(start > CSS.indexOf("table.wc th:nth-child(n+3),table.wc td:nth-child(n+3){width:44px}"), "après les règles de base du tableau");
+  const block = CSS.slice(start, CSS.indexOf("\n}", start));
+  assert.match(block, /table\.wc th:nth-child\(n\+3\),table\.wc td:nth-child\(n\+3\)\{width:auto\}/);
+  assert.match(block, /table\.wc th\{letter-spacing:0\}/);
+  assert.match(block, /table\.wc th,table\.wc td\{padding-left:2px;padding-right:2px\}/);
+  assert.doesNotMatch(block, /font-size|display:none|visibility|text-overflow|overflow:hidden/, "rien de caché ni de rapetissé");
+  // 360 px et plus : la règle de base reste.
+  assert.match(CSS, /\ntable\.wc th:nth-child\(n\+3\),table\.wc td:nth-child\(n\+3\)\{width:44px\}/);
+});
+
+test("repêchage : 6 en-têtes pour 6 cellules par rangée, noms longs et valeurs au complet (données synthétiques)", async () => {
+  const data = fixtures();
+  // Association de l'Est synthétique : 8 équipes, dont les noms les plus longs (Hurricanes, Blue Jackets).
+  const east = [["MTL", "Canadiens", "A", 2, 0, 20], ["TOR", "Maple Leafs", "A", 1, 0, 24], ["BOS", "Bruins", "A", 3, 0, 19], ["NYR", "Rangers", "M", 1, 0, 23],
+    ["WSH", "Capitals", "M", 2, 0, 21], ["NJD", "Devils", "M", 3, 0, 18], ["CAR", "Hurricanes", "M", 4, 1, 18], ["CBJ", "Blue Jackets", "M", 5, 2, 17],
+    ["PIT", "Penguins", "M", 6, 3, 15], ["TBL", "Lightning", "A", 4, 4, 5]];
+  data.standings.standings = east.map(([abbr, name, div, ds, wc, pts], i) => ({ ...data.standings.standings[0], teamAbbrev: { default: abbr },
+    teamCommonName: { default: name }, teamName: { default: name }, divisionAbbrev: div, divisionSequence: ds, conferenceSequence: i + 1,
+    wildcardSequence: wc, points: pts, gamesPlayed: 17, pointPctg: pts / 34 }));
+  const { html } = await home({ data });
+  const table = html.match(/<table class="stats wc">[\s\S]*?<\/table>/)?.[0];
+  assert.ok(table, "tableau des places de repêchage");
+  const cells = (row, tag) => [...row.matchAll(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "g"))].map((m) => m[1].replace(/<[^>]+>/g, ""));
+  assert.deepEqual(cells(table.match(/<thead>[\s\S]*?<\/thead>/)[0], "th"), ["Rang", "Équipe", "PJ", "PTS", "%PTS", "Écart"]);
+  const rows = [...table.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)].slice(1).map((m) => cells(m[1], "td"));
+  assert.equal(rows.length, 4);
+  for (const r of rows) assert.equal(r.length, 6, r.join(" | "));
+  assert.deepEqual(rows[0], ["1re", "Hurricanes", "17", "18", ",529", "—"]);
+  assert.deepEqual(rows[1], ["2e", "Blue Jackets", "17", "17", ",500", "—"]);
+  assert.deepEqual(rows[3], ["4", "Lightning", "17", "5", ",147", "−12"]);
+});

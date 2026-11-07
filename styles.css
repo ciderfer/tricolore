@@ -333,6 +333,14 @@ table.wc tbody tr:not(.mtl) td{background:transparent}
 table.wc tbody tr:nth-child(-n+2):not(.mtl) td{background:var(--white)}
 table.wc tr.mtl td{background:var(--red);color:var(--white)}
 table.wc tr.mtl td:first-child,table.wc tr.mtl td.pts{color:var(--white)}
+/* 320 px : le tableau doit tenir dans 284 px. Les colonnes de chiffres prennent la largeur de leur contenu
+   (pas 44 px chacune), en-têtes sans espacement des lettres (toujours 12 px). Rien ne change à 360 px et plus. */
+@media (max-width:359px){
+  table.wc th,table.wc td{padding-left:2px;padding-right:2px}
+  table.wc th{letter-spacing:0}
+  table.wc th:nth-child(n+3),table.wc td:nth-child(n+3){width:auto}
+  table.wc th:nth-child(2),table.wc td:nth-child(2){padding-left:6px}
+}
 /* Nouvelles */
 .news{background:var(--blue)}
 .news .h{color:var(--white)}
