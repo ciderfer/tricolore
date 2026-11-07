@@ -221,3 +221,21 @@ test("accueil : match en cours lu dans les fichiers du site, fraîcheur dite san
   assert.match(html, /12:34 à jouer<small>Pointage de \d{1,2} h \d{2} \(heure de l’Est\), mis à jour aux 15 minutes environ\.<\/small>/);
   assert.doesNotMatch(visible(html), /fichiers du site|HTTP/);
 });
+
+test("téléphone : date et adversaire compacts à 320, 375 et 390 px, date lisible, ordi inchangé", () => {
+  const start = CSS.indexOf("@media (max-width:1023px){\n  .datebig .day");
+  assert.ok(start > CSS.indexOf(".datebig.xl .wd,.datebig.xl .mo{font-size:min(36px,9vw)}"), "après les variantes .l et .xl, pour les remplacer");
+  const block = CSS.slice(start, CSS.indexOf("\n}", start));
+  const sizes = {};
+  for (const [, sels, px, vw] of block.matchAll(/^\s*([^{\n]+)\{font-size:min\((\d+)px,([\d.]+)vw\)\}/gm))
+    for (const s of sels.split(",")) sizes[s.trim()] = (w) => Math.min(Number(px), (Number(vw) * w) / 100);
+  for (const w of [320, 375, 390]) {
+    for (const d of [".datebig .day", ".datebig.xl .day"]) assert.ok(sizes[d](w) >= 80 && sizes[d](w) <= 120, `${d} à ${w} px : ${sizes[d](w)}`);
+    for (const s of [".datebig .wd", ".datebig.l .mo", ".datebig.xl .wd"]) assert.ok(sizes[s](w) >= 24, `${s} à ${w} px`);
+    const name = sizes[".opp .name.long"](w);
+    assert.ok(name >= 44 && name <= 56, `adversaire à ${w} px : ${name}`);
+  }
+  // Ordi : les tailles d'avant restent les règles de base.
+  assert.match(CSS, /\.datebig \.day\{font-size:min\(172px,43vw\)/);
+  assert.match(CSS, /\.opp \.name\{font-size:84px/);
+});

@@ -375,6 +375,17 @@ sup{font-size:.62em;line-height:0;vertical-align:.5em}
 .datebig.l .wd,.datebig.l .mo{font-size:min(38px,9.5vw)}
 .datebig.xl .day{font-size:min(150px,37.5vw)}
 .datebig.xl .wd,.datebig.xl .mo{font-size:min(36px,9vw)}
+/* Téléphone : date et adversaire plus compacts, pour que « Ce soir », l'heure, la télé et tout le compte à rebours
+   tiennent dans le premier écran (390 × 844). Ordi : tailles ci-dessus, inchangées. */
+@media (max-width:1023px){
+  .datebig .day{font-size:min(116px,29vw)}
+  .datebig.xl .day{font-size:min(104px,26vw)}
+  .datebig .wd,.datebig .mo{font-size:min(36px,9vw)}
+  .datebig.l .wd,.datebig.l .mo{font-size:min(32px,8vw)}
+  .datebig.xl .wd,.datebig.xl .mo{font-size:min(30px,7.5vw)}
+  .opp{margin-top:14px}
+  .opp .name,.opp .name.long{font-size:min(56px,15vw)}
+}
 /* Nouvelles */
 .news-list{list-style:none;margin:0;padding:0}
 .news-list li:nth-child(even) a{background:var(--zebra-blue)}
