@@ -274,3 +274,19 @@ test("repêchage : 6 en-têtes pour 6 cellules par rangée, noms longs et valeur
   assert.deepEqual(rows[1], ["2e", "Blue Jackets", "17", "17", ",500", "—"]);
   assert.deepEqual(rows[3], ["4", "Lightning", "17", "5", ",147", "−12"]);
 });
+
+test("en-tête des nouvelles : passe à la ligne au besoin (320 px), heure et Actualiser restent à droite, rien de caché", () => {
+  const hd = color(/(\.news-hd\{[^}]*\})/), stamp = color(/(\.stamp\{[^}]*\})/);
+  assert.match(hd, /display:flex;flex-wrap:wrap/);
+  assert.match(stamp, /margin:0 0 0 auto/, "seul sur sa ligne, le bloc reste aligné à droite");
+  for (const r of [hd, stamp, color(/(\.stamp-btn\{[^}]*\})/)]) assert.doesNotMatch(r, /overflow|display:none|white-space:nowrap|text-overflow/);
+  assert.ok(Number(color(/\.stamp-btn\{[^}]*min-height:(\d+)px/)) >= 44);
+});
+
+test("« Ce soir » / « Cet après-midi » : taille qui suit l'écran, 44 px dès 367 px, au moins 38 px à 320", () => {
+  const m = CSS.match(/\.when\{[^}]*font-size:min\((\d+)px,([\d.]+)vw\)/);
+  assert.ok(m, "taille en min(px, vw)");
+  const at = (w) => Math.min(Number(m[1]), (Number(m[2]) * w) / 100);
+  assert.equal(at(390), 44);
+  assert.ok(at(320) >= 38 && at(320) < 44);
+});
