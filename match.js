@@ -15,7 +15,7 @@
   const SLOW_MS = 60_000; // gardiens, tirs et statistiques : chaque minute pendant le match
   const ID = new URLSearchParams(location.search).get("id") || "";
 
-  const errBox = (what, detail) => T.errBox(what, detail, false);
+  const { errBox } = T;
   // Lien retour : en mode app (écran d'accueil), il n'y a pas de bouton retour de Safari.
   // Si on arrive d'une page du site, on y revient (history.back garde la position dans la page);
   // sinon (lien partagé, favori), on va au calendrier.
@@ -242,7 +242,7 @@
   }
   function warn(why) {
     const n = document.querySelector(".state");
-    if (n && !n.querySelector(".warn-note")) n.insertAdjacentHTML("beforeend", `<small class="warn-note">Mise à jour impossible (${esc(why)}). Données affichées : dernière lecture réussie.</small>`);
+    if (n && !n.querySelector(".warn-note")) n.insertAdjacentHTML("beforeend", `<small class="warn-note" data-detail="${esc(why)}">Mise à jour impossible pour le moment. Données affichées : dernière mise à jour réussie.</small>`);
   }
   // Message du relais : remplace la partie reçue dans la dernière lecture, puis redessine.
   function onPush(m) {

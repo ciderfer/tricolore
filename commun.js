@@ -23,6 +23,16 @@ window.T = (() => {
   const signed = (v) => (!fin(v) ? "—" : v > 0 ? `+${v}` : v < 0 ? `−${-v}` : "0");
   const season = (id) => (/^\d{8}$/.test(String(id ?? "")) ? `Saison ${String(id).slice(0, 4)}-${String(id).slice(4)}` : "");
 
+  // Jour du match dit simplement, selon le calendrier de Montréal : « Ce soir », « Cet après-midi », « Aujourd’hui »,
+  // « Demain », le jour de la semaine (moins d'une semaine), sinon rien (la date suffit).
+  const fYmd = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }), fHour = F({ hour: "numeric", hourCycle: "h23" }), fWeekday = F({ weekday: "long" });
+  function dayLabel(start, now = new Date()) {
+    const days = Math.round((Date.parse(fYmd.format(start)) - Date.parse(fYmd.format(now))) / 86_400_000);
+    if (days === 0) { const h = Number(fHour.format(start).replace(/\D/g, "")); return h >= 17 ? "Ce soir" : h >= 12 ? "Cet après-midi" : "Aujourd’hui"; }
+    if (days === 1) return "Demain";
+    return days > 1 && days < 7 ? cap(fWeekday.format(start)) : "";
+  }
+
   // Âge à la date d'aujourd'hui (heure de l'Est), à partir de la date de naissance AAAA-MM-JJ.
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date());
   function age(birth) {
@@ -92,9 +102,10 @@ window.T = (() => {
   const UNOFFICIAL = "<p>Site de partisan non officiel, non affilié à la LNH ni au Club de hockey Canadien.</p>";
   const ALERTES = `<p><a class="more" href="alertes.html">Alertes de match ›</a></p>`; // lien du pied de page (alertes.html)
 
-  // lnh : la source est un fichier du site tiré de l'API LNH (sinon : le relais en direct ou une fiche).
-  const errBox = (what, detail, lnh = true) =>
-    `<div class="err">${esc(what)} : source ${lnh ? "LNH " : ""}indisponible${detail ? ` (${esc(detail)})` : ""}. Aucune donnée affichée plutôt qu’une donnée inexacte.</div>`;
+  // Message d'erreur pour le partisan : ce qui manque, sans jargon. La cause technique (ex. « HTTP 503 ») reste dans
+  // data-detail, pour qui inspecte la page.
+  const errBox = (what, detail) =>
+    `<div class="err"${detail ? ` data-detail="${esc(detail)}"` : ""}>${esc(what)} : indisponible pour le moment. Aucune donnée affichée plutôt qu’une donnée inexacte.</div>`;
 
   async function getJson(path) {
     const r = await fetch(path, { cache: "no-cache" });
@@ -116,13 +127,18 @@ window.T = (() => {
     };
   }
   // Carte de l'accueil : "installer" (iPhone ou iPad dans Safari, hors de l'écran d'accueil), "activer" (push possible,
-  // pas abonné) ou "" (pas de carte : déjà abonné, notifications refusées, ou push impossible dans ce navigateur).
-  function alertCard(dev, subscribed) {
+  // pas abonné) ou "" (pas de carte : masquée sur cet appareil, déjà abonné, notifications refusées, ou push impossible).
+  function alertCard(dev, subscribed, hidden = false) {
+    if (hidden) return "";
     if (dev.iOS && !dev.standalone) return dev.safari ? "installer" : "";
     return dev.push && !dev.denied && !subscribed ? "activer" : "";
   }
 
   const PUSH_STORE = "tricolore.alertes"; // choix enregistrés sur cet appareil (le Worker garde les mêmes)
+  // Carte « Alertes de match » masquée sur cet appareil (le lien du pied de page reste).
+  const CARD_STORE = "tricolore.carte-alertes";
+  function cardHidden() { try { return localStorage.getItem(CARD_STORE) === "masquee"; } catch { return false; } }
+  function hideCard() { try { localStorage.setItem(CARD_STORE, "masquee"); } catch { /* stockage indisponible : masquée pour cette visite */ } }
   function pushPrefs() {
     try {
       const p = JSON.parse(localStorage.getItem(PUSH_STORE) || "null");
@@ -177,8 +193,8 @@ window.T = (() => {
     const when = meta?.updatedAt ? fStamp.format(new Date(meta.updatedAt)) : null;
     const checked = meta?.checkedAt ? fStamp.format(new Date(meta.checkedAt)) : null;
     return `<p>Données : API publique de la LNH${when ? ` · dernière modification le ${esc(when)}` : ""}${checked ? `, vérifiées le ${esc(checked)}` : ""}${when || checked ? " (heure de l’Est)" : ""}.</p>
-      ${metaErr ? `<p class="foot-warn">Heure de mise à jour inconnue (meta.json : ${esc(metaErr)}).</p>` : ""}
-      ${failed.length ? `<p class="foot-warn">Source en échec : ${esc(failed.join(", "))}.</p>` : ""}
+      ${metaErr ? `<p class="foot-warn" data-detail="${esc(metaErr)}">Heure de mise à jour inconnue.</p>` : ""}
+      ${failed.length ? `<p class="foot-warn">Indisponible pour le moment : ${esc(failed.join(", "))}.</p>` : ""}
       ${ALERTES}${UNOFFICIAL}`;
   }
 
@@ -224,7 +240,7 @@ window.T = (() => {
     try { return fn(); } catch (e) { console.error(e); return `<div class="blk">${box("Section", "erreur d’affichage")}</div>`; }
   }).join("");
 
-  return { TZ, MTL, LIVE, DONE, esc, loc, fin, cap, num, F, fStamp, pct, gaa, signed, season, age, tvOf, outcome,
+  return { TZ, MTL, LIVE, DONE, esc, loc, fin, cap, num, F, fStamp, pct, gaa, signed, season, dayLabel, age, tvOf, outcome,
     WORKER, POLL_MS, liveSocket, WORDMARK, UNOFFICIAL, ALERTES, errBox, getJson, load, footer, sections, lastGoal,
-    pushDevice, alertCard, pushPrefs, savePushPrefs, pushPost, pushKey, pushSubscribe };
+    pushDevice, alertCard, cardHidden, hideCard, pushPrefs, savePushPrefs, pushPost, pushKey, pushSubscribe };
 })();
