@@ -5,7 +5,7 @@
 // fichiers data/*.json sont gardés en mémoire à l'installation, puis à chaque lecture réussie.
 // - Pages et data/*.json : réseau d'abord. Sans réseau (ou s'il ne répond pas en 4 s), la copie en mémoire, et la
 //   page est prévenue (message « tricolore-hors-ligne ») : horsligne.js affiche alors « Hors ligne : données du … ».
-// - JS et CSS versionnés (?v=, ajouté par pages.yml) : la copie de cette version exacte si on l'a, sinon le réseau;
+// - JS et CSS versionnés (?v=, ajouté par data.yml) : la copie de cette version exacte si on l'a, sinon le réseau;
 //   une seule version gardée par fichier. Sans version (essais locaux) : réseau d'abord.
 // - Jamais touchés : tout ce qui sort du site (relais Cloudflare, API LNH) et le WebSocket du pointage en direct.
 //   Un pointage en direct n'est donc jamais resservi de la mémoire comme s'il était actuel.

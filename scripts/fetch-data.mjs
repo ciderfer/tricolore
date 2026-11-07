@@ -2,7 +2,7 @@
 // Node 20+, aucune dépendance. Utilisé localement et par .github/workflows/data.yml.
 //
 // - data/<source>.json : réponse brute de l'API (seul le champ volatil
-//   standings.standingsDateTimeUtc est retiré pour éviter un commit à chaque exécution;
+//   standings.standingsDateTimeUtc est retiré pour éviter une publication à chaque exécution;
 //   les liens vers les photos des joueurs (headshot) de roster et stats sont aussi retirés,
 //   le site n'affiche aucune photo).
 // - data/meta.json : updatedAt (dernière modification des données), checkedAt (dernière
@@ -12,7 +12,7 @@
 // - Si une source échoue, son ancien fichier est conservé, mais meta.json la marque
 //   en échec : la page affiche alors un message d'erreur au lieu de données périmées.
 // - Si rien n'a changé (données et état des sources) et que checkedAt a moins de 45 min,
-//   aucun fichier n'est réécrit (donc aucun commit).
+//   aucun fichier n'est réécrit (donc aucune publication, voir scripts/publication.mjs).
 // - data/canadiens.ics : calendrier à s'abonner (voir scripts/ics.mjs), réécrit seulement si un match change.
 // - data/news.json : manchettes (titre, source, date, lien seulement), voir scripts/news.mjs.
 //   L'état de chaque source de nouvelles est noté dans meta.json (champ news).

@@ -7,7 +7,7 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 
 - Site statique (HTML, CSS, JavaScript), aucune étape de compilation.
 - Données : [API publique de la LNH](https://api-web.nhle.com/v1/). Elle n’autorise pas les appels depuis un navigateur (pas d’en-tête CORS). Deux chemins :
-  - **Fichiers du site** : une GitHub Action récupère les données aux 15 minutes et les enregistre dans `data/`. Elle est lancée par la minuterie du Worker Cloudflare (l’horaire de GitHub Actions saute la plupart des exécutions et ne sert plus que de filet de sécurité). La page s’affiche tout de suite avec ces fichiers.
+  - **Fichiers du site** : une GitHub Action récupère les données aux 15 minutes et publie le site avec elles dans `data/` (les données ne sont pas dans Git, voir « Données et publication »). Elle est lancée par la minuterie du Worker Cloudflare (l’horaire de GitHub Actions saute la plupart des exécutions et ne sert plus que de filet de sécurité). La page s’affiche tout de suite avec ces fichiers.
   - **Pointage en direct** : quand un match est en cours ou commence dans moins de 30 minutes, la page ouvre une connexion WebSocket vers un petit Worker Cloudflare (`worker/`) : un Durable Object par match lit l’API LNH aux 5 secondes pour tout le monde et pousse chaque changement (`worker/direct.js`), ce qui tient des milliers de partisans dans le quota gratuit. Si la connexion ne s’ouvre pas, la page interroge le Worker aux 15 secondes comme avant; si le Worker ne répond pas, elle revient aux fichiers du site et l’indique.
   - **Dernier but** (carte du match en direct ou terminé de l’accueil, données du Worker seulement) : par exemple « But de Caufield (5), à 11:45 de la 2e période » (temps écoulé dans la période). Si le pointage compte plus de buts que le sommaire de la LNH, la carte affiche « Détails du but en attente de la LNH » plutôt que le but précédent. Un nouveau but est annoncé aux lecteurs d’écran (zone `aria-live`).
 - Accueil, sous le prochain match : face-à-face des deux équipes selon `standings.json` (fiche, points, rangs, buts pour-contre, domicile / étranger, séquence) et résultats des affrontements déjà joués cette saison selon `schedule.json`. Sur téléphone comme sur ordi. Sur téléphone, le face-à-face donne aussi les matchs joués et remplace le bandeau de la fiche du CH (pas de doublon); ce bandeau reste affiché quand il n’y a pas de face-à-face.
@@ -25,9 +25,8 @@ Site de partisan **non officiel**, non affilié à la LNH ni au Club de hockey C
 | `scripts/fetch-data.mjs` | Récupère les données (Node 20, sans dépendance) |
 | `scripts/news.mjs` | Sources de nouvelles et filtre « Canadien » |
 | `scripts/fetch-injuries.mjs`, `blesses.js`, `blesses.css` | Blessés du CH (source ESPN non officielle) : récupération par la tâche de données, section de la page Alignement |
-| `data/` | `schedule.json`, `scoreboard.json`, `standings.json`, `news.json`, `meta.json`, `injuries.json` (blessés, ESPN) |
-| `.github/workflows/data.yml` | Mise à jour des données aux 15 minutes (et sur demande) |
-| `.github/workflows/pages.yml` | Déploiement sur GitHub Pages depuis `main`. Ajoute `?v=<empreinte>` aux JS et CSS dans le HTML (empreinte du contenu du code) pour que les navigateurs ne gardent pas un ancien fichier après un déploiement |
+| `data/` (pas dans Git) | `schedule.json`, `scoreboard.json`, `standings.json`, `news.json`, `meta.json`, `injuries.json` (blessés, ESPN), `canadiens.ics`, `joueurs/`. Recréé en local par `node scripts/fetch-data.mjs` |
+| `.github/workflows/data.yml`, `scripts/publication.mjs` | Données aux 15 minutes et publication sur GitHub Pages (push sur `main`, minuterie du Worker, horaire, sur demande). Ajoute `?v=<empreinte>` aux JS et CSS dans le HTML (empreinte du contenu du code) pour que les navigateurs ne gardent pas un ancien fichier après une publication. Voir « Données et publication » |
 | `.github/workflows/surveillance.yml`, `scripts/surveillance.mjs`, `scripts/etat.mjs` | Surveillance des données : ouvre une issue GitHub (donc un courriel) si le site n’a pas vérifié ses données depuis 90 min, si une source de la LNH est en échec depuis plus de 2 h ou si le `GH_TOKEN` du Worker expire dans 14 jours ou moins, et la ferme au retour à la normale. Voir « Surveillance » plus bas |
 | `tests/` | Tests de la logique pure (surveillance, dernier but, blessés) : `node --test tests/*.test.mjs` |
 | `.github/dependabot.yml` | Mises à jour hebdomadaires des actions GitHub, fixées par SHA dans les workflows |
@@ -43,6 +42,24 @@ node scripts/fetch-injuries.mjs
 python3 -m http.server 8000
 # puis ouvrir http://localhost:8000
 ```
+
+`data/` n’est pas dans Git : les deux scripts le recréent au complet à partir d’un dossier vide.
+
+## Données et publication
+
+`.github/workflows/data.yml` fait tout, un passage à la fois (`concurrency`) :
+
+1. Reprend du cache GitHub Actions le dernier site publié (`_publie/`, données comprises) et copie ses données dans `data/`. Cache absent (premier passage, cache effacé ou 7 jours sans usage) : les scripts relisent tout; seule l’heure du début d’une panne en cours (`since`) est perdue.
+2. `fetch-data.mjs` puis `fetch-injuries.mjs` (comme avant : rien n’est réécrit si rien ne change, sauf `checkedAt` au moins aux 45 min).
+3. Construit `_site` (code de `main`, `data/`, `?v=` des JS et CSS).
+4. `scripts/publication.mjs` : échoue si `data/meta.json` ou `data/schedule.json` manque ou est illisible (rien n’est publié, le site en ligne reste tel quel). Sinon, publie si un fichier diffère du site publié, ou sur un push sur `main`.
+5. Après une publication réussie seulement, le nouveau site va dans le cache. Si la publication échoue, le passage suivant voit encore la différence et réessaie.
+
+Le job n’a que `contents: read` : plus aucun commit de données.
+
+Attention : GitHub désactive un workflow avec horaire après 60 jours sans activité dans un repo public, et un workflow désactivé n’accepte plus non plus les appels du Worker. Les commits de données comptaient comme activité. Sans commit pendant 60 jours (l’été, par exemple), réactiver « Données LNH » et « Surveillance des données » dans l’onglet Actions.
+
+Retour en arrière : voir `docs/proposition-donnees-hors-git.md`.
 
 ## Surveillance
 

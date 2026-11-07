@@ -8,7 +8,7 @@
 // - En cas d'échec (réseau, HTTP, format inattendu, CH absent de la réponse), le fichier devient
 //   { players: null, error } et le script se termine sans erreur : la page affiche « données indisponibles »,
 //   jamais « Aucun blessé signalé » sans le savoir.
-// - Si la liste n'a pas changé et que fetchedAt a moins de 45 min, rien n'est réécrit (pas de commit).
+// - Si la liste n'a pas changé et que fetchedAt a moins de 45 min, rien n'est réécrit (pas de publication).
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 

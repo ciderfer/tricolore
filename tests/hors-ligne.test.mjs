@@ -78,10 +78,14 @@ test("installation : enveloppe du site et data/*.json en mémoire; un fichier ma
 test("la liste d'installation suit le dépôt : chaque page, script, feuille de style et donnée lue par le site", () => {
   const { SHELL, DATA } = load().exp;
   const all = [...SHELL, ...DATA];
-  for (const p of all) if (p !== "./") assert.ok(existsSync(new URL(p, ROOT)), `${p} existe`);
+  for (const p of SHELL) if (p !== "./") assert.ok(existsSync(new URL(p, ROOT)), `${p} existe`);
   const top = readdirSync(ROOT).filter((f) => /\.(html|js|css)$/.test(f) && f !== "sw.js");
   for (const f of top) assert.ok(f === "index.html" ? all.includes("./") : all.includes(f), `${f} dans la liste de sw.js`);
-  for (const f of readdirSync(new URL("data/", ROOT)).filter((f) => f.endsWith(".json"))) assert.ok(DATA.includes(`data/${f}`), `data/${f} dans DATA`);
+  // data/ n'est pas dans Git (publié par data.yml) : vérifié en local, après node scripts/fetch-data.mjs.
+  const data = new URL("data/", ROOT);
+  if (!existsSync(data)) return;
+  const files = readdirSync(data).filter((f) => f.endsWith(".json")).map((f) => `data/${f}`);
+  assert.deepEqual([...files].sort(), [...DATA].sort(), "DATA de sw.js = les fichiers data/*.json");
 });
 
 test("activation : les anciennes versions du cache sont effacées, les autres caches gardés", async () => {
